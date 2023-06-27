@@ -24,3 +24,9 @@ createsuperuser:
 .PHONY: runbot
 runbot:
 	poetry run python3 app/runbot.py
+
+
+## Poetry
+.PHONY: install
+install:
+	poetry install
