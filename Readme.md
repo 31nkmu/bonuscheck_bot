@@ -1,4 +1,4 @@
-# Bounus Check Bot
+# Bonus Check Bot
 ___
 
 ## Запуск
@@ -32,7 +32,7 @@ $ cd BonusCheck_bot
 ```sh
 (venv) [BonusCheck_bot] $ make install
 ```
-4. Создайть базу данных
+4. Создать базу данных
 
 - Linux
 
