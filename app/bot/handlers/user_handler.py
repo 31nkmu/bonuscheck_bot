@@ -37,6 +37,7 @@ class BotHandler:
 
         self.dp.register_callback_query_handler(self.download_check, Text('download_check'), state='*')
         self.dp.register_callback_query_handler(self.personal_area, Text('personal_area'), state='*')
+        self.dp.register_callback_query_handler(self.check_statistic, Text('check_statistic'), state='*')
 
     @staticmethod
     async def edit_page(message: Message,
@@ -66,6 +67,9 @@ class BotHandler:
         await self.bot.send_message(chat_id=message.chat.id, text=text_email_code)
 
     async def enter_code(self, message: types.Message, state: FSMContext):
+        """
+        Проверяет введенный пользователем код
+        """
         message_to_delete = (await message.answer('⌛Проверяем код. . .'))['message_id']
         try:
             code = await self.bi.get_code(message.text)
@@ -87,7 +91,6 @@ class BotHandler:
         except Exception as _ex:
             await self.dp.bot.send_message(chat_id=message.chat.id,
                                            text="❌Ошибка при проверке кода.")
-
             logging.exception(_ex)
         finally:
             await self.bot.delete_message(chat_id=message.chat.id, message_id=message_to_delete)
@@ -97,7 +100,13 @@ class BotHandler:
         await state.finish()
         await cb.bot.send_message(chat_id=cb.message.chat.id, text='Загрузка чеков')
 
-    @staticmethod
-    async def personal_area(cb: CallbackQuery, state: FSMContext):
+    async def personal_area(self, cb: CallbackQuery, state: FSMContext):
         await state.finish()
-        await cb.bot.send_message(chat_id=cb.message.chat.id, text='Личный кабинет')
+        personal_area_kb = await self.kb.get_personal_area_kb()
+        await cb.bot.send_message(chat_id=cb.message.chat.id, reply_markup=personal_area_kb, text='Ваш выбор')
+
+    async def check_statistic(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        user = await self.bi.get_user(tg_id=cb.from_user.id)
+        check_amount = await self.bi.get_all_check_amount(user)
+        await cb.bot.send_message(chat_id=cb.message.chat.id, text=check_amount)

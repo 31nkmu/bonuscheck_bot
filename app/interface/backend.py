@@ -1,14 +1,14 @@
 from asgiref.sync import sync_to_async
 
-from applications.users.models import Code, Users
+from applications.users.models import Code, Users, Check
 from config.settings import BACKEND_LOGGER as log
 
 
 class UserInterfaceMixin:
     @staticmethod
     def __get_user(tg_id: str):
-        code = Users.objects.get(tg_id=tg_id)
-        return code
+        user = Users.objects.get(tg_id=tg_id)
+        return user
 
     @staticmethod
     @sync_to_async
@@ -48,7 +48,13 @@ class CodeInterfaceMixin:
 
 
 class CheckInterfaceMixin:
-    pass
+    @sync_to_async
+    def get_all_check_amount(self, user):
+        try:
+            return len(Check.objects.filter(owner=user))
+        except Exception as err:
+            log.warning(err)
+            return 0
 
 
 class OutputInterfaceMixin:
