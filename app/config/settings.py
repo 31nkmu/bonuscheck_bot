@@ -154,3 +154,9 @@ def add_named_logger(name: str):
 TELEGRAM_API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 TELEGRAM_LOGGER = add_named_logger("telegram_bot")
 TELEGRAM_MEDIA_PATH = TELEGRAM_DIR / "media"
+
+BACKEND_HOST = os.getenv("BACKEND_HOST", "127.0.0.1")
+BACKEND_PORT = os.getenv("BACKEND_PORT", "8080")
+BACKEND_URL = f"http://{BACKEND_HOST}{BACKEND_PORT and ':%s' % BACKEND_PORT}"
+BACKEND_ADMIN_URL = f"{BACKEND_URL}/admin"
+BACKEND_LOGGER = add_named_logger("django")

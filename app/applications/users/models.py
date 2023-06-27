@@ -2,22 +2,28 @@ from django.db import models
 
 
 class Users(models.Model):
+    """
+    Пользователи
+    """
     code = models.ForeignKey("Code", on_delete=models.CASCADE, related_name="users")
 
     is_banned = models.BooleanField(default=False)
     registered_at = models.DateTimeField(auto_now=True)
     tg_id = models.CharField(unique=True, max_length=120)
-    bonus_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    bonus_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
 
     def __str__(self):
-        return self.code
+        return self.tg_id
 
 
 class Code(models.Model):
+    """
+    Коды
+    """
     title = models.CharField(max_length=120)
     keycode = models.CharField(max_length=120)
     is_active = models.BooleanField(default=True)
@@ -27,6 +33,9 @@ class Code(models.Model):
 
 
 class Check(models.Model):
+    """
+    Чеки
+    """
     owner = models.ForeignKey("Users", on_delete=models.CASCADE, related_name="checks")
 
     qr_data = models.CharField(max_length=120)
@@ -37,6 +46,9 @@ class Check(models.Model):
 
 
 class Output(models.Model):
+    """
+    Заявка на вывод
+    """
     owner = models.ForeignKey("Users", on_delete=models.CASCADE, related_name="outputs")
 
     amount = models.PositiveIntegerField(default=1)

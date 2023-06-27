@@ -1,25 +1,32 @@
 from aiogram import executor, Dispatcher
 
 from bot.handlers.user_handler import BotHandler
+from bot.keyboards.keyboards import KeyboardManager
 from config.settings import TELEGRAM_LOGGER as log
 
 from loguru._logger import Logger
 
+from interface.backend import BackendInterface
+
 
 class BotService:
-    __slots__ = "dp", "bot", "log"
+    __slots__ = "dp", "bot", "log", "bi", "kb"
 
     def __init__(self,
                  dp: Dispatcher,
-                 log: Logger):
+                 log: Logger,
+                 bi: BackendInterface,
+                 kb: KeyboardManager):
         self.dp = dp
         self.bot = dp.bot
         self.log = log
+        self.bi = bi
+        self.kb = kb
 
     @log.catch
     def start(self):
         """Запуск бот сервиса. Регистрирует обработчики и запускает поллинг."""
-        user_handler = BotHandler(self.dp, self.log)
+        user_handler = BotHandler(self.dp, self.log, self.bi, self.kb)
 
         # Работа с ролями тут. Этот фильтр ставит роли!!!
         # self.dp.middleware.setup(RoleMiddleware())
