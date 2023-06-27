@@ -17,22 +17,22 @@ $ git clone git@github.com:KerkaDev/BonusCheck_bot.git
 $ cd BonusCheck_bot
 ```
 
-1. Создай виртуальное окружение
+1. Создать виртуальное окружение
 ```sh
 [BonusCheck_bot] $ poetry config virtualenvs.in-project true
-Посмотри версию своего python
+# Посмотри версию своего python
 [BonusCheck_bot] $ python --version
 [BonusCheck_bot] $ poetry env use версия_python
 ```
-2. Активируй окружение
+2. Активировать окружение
 ```sh
 [BonusCheck_bot] $ source .venv/bin/activate
 ```
-3. Установи библиотеки
+3. Установить библиотеки
 ```sh
 (venv) [BonusCheck_bot] $ make install
 ```
-4. Создай базу данных
+4. Создайть базу данных
 
 - Linux
 
