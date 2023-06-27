@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "motivation-bot-django"
+version = "0.1.0"
+description = ""
+authors = ["billal <karimovbillal20002@gmail.com>"]
+readme = "README.md"
+packages = [{include = "motivation_bot_django"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^4.2.2"
+aiogram = "^2.25.1"
+python-dotenv = "^1.0.0"
+loguru = "^0.7.0"
+psycopg2-binary = "^2.9.6"
+django-jazzmin = "^2.6.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
