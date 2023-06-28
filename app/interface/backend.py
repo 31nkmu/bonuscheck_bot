@@ -50,6 +50,9 @@ class CodeInterfaceMixin:
 class CheckInterfaceMixin:
     @sync_to_async
     def get_all_check_amount(self, user):
+        """
+        Выводит количество чеков пользователя
+        """
         try:
             return len(Check.objects.filter(owner=user))
         except Exception as err:
