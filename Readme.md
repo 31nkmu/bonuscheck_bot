@@ -32,6 +32,21 @@ $ cd BonusCheck_bot
 ```sh
 (venv) [BonusCheck_bot] $ make install
 ```
+Установить зависимости для pyzbar 
+
+- Linux
+
+```sh
+(venv) [BonusCheck_bot] $ sudo apt-get install libzbar0
+```
+
+- Windows
+---
+Загрузить предварительно скомпилированный пакет zbar для Windows с официального сайта (https://www.zbar.sourceforge.net/download.html).
+
+Распаковать архив и скопировать файлы zbar.dll и zbar.lib в директорию C:\Windows\System32.
+
+---
 4. Создать базу данных
 
 - Linux
