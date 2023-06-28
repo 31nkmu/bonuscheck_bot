@@ -7,21 +7,24 @@ from config.settings import TELEGRAM_LOGGER as log
 from loguru._logger import Logger
 
 from interface.backend import BackendInterface
+from interface.proverkacheka import ProverkachekaInterface
 
 
 class BotService:
-    __slots__ = "dp", "bot", "log", "bi", "kb"
+    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi"
 
     def __init__(self,
                  dp: Dispatcher,
                  log: Logger,
                  bi: BackendInterface,
-                 kb: KeyboardManager):
+                 kb: KeyboardManager,
+                 pchi: ProverkachekaInterface):
         self.dp = dp
         self.bot = dp.bot
         self.log = log
         self.bi = bi
         self.kb = kb
+        self.pchi = pchi
 
     @log.catch
     def start(self):

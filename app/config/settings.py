@@ -160,3 +160,6 @@ BACKEND_PORT = os.getenv("BACKEND_PORT", "8080")
 BACKEND_URL = f"http://{BACKEND_HOST}{BACKEND_PORT and ':%s' % BACKEND_PORT}"
 BACKEND_ADMIN_URL = f"{BACKEND_URL}/admin"
 BACKEND_LOGGER = add_named_logger("django")
+
+# Proverkacheka
+CHECK_TOKEN = os.getenv("CHECK_TOKEN")

@@ -16,6 +16,7 @@ from pyzbar import pyzbar
 
 from bot.keyboards.keyboards import KeyboardManager
 from interface.backend import BackendInterface
+from interface.proverkacheka import ProverkachekaInterface
 
 
 class FSM(StatesGroup):
@@ -24,18 +25,20 @@ class FSM(StatesGroup):
 
 
 class BotHandler:
-    __slots__ = "dp", "bot", "log", "bi", "kb"
+    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi"
 
     def __init__(self,
                  dp: Dispatcher,
                  log: Logger,
                  bi: BackendInterface,
-                 kb: KeyboardManager):
+                 kb: KeyboardManager,
+                 pchi: ProverkachekaInterface):
         self.dp = dp
         self.bot = dp.bot
         self.log = log
         self.bi = bi
         self.kb = kb
+        self.pchi = pchi
 
     def register_user_handlers(self):
         # Логика проверки кода в таблице
@@ -113,6 +116,8 @@ class BotHandler:
             qr = await self.get_qr_code_by_file_id(file_id)
             if qr:
                 # TODO: Отправлять этот qr на проверку
+                qr_data = await self.pchi.send_raw_data(qr)
+
                 await self.bot.send_message(chat_id=message.chat.id, text=qr)
             else:
                 find_not_qr_text = 'Не могу найти на этой фотографии qr code\nПопробуйте еще раз'
