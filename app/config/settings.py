@@ -111,7 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
@@ -163,3 +163,4 @@ BACKEND_LOGGER = add_named_logger("django")
 
 # Proverkacheka
 CHECK_TOKEN = os.getenv("CHECK_TOKEN")
+CHECK_LOGGER = add_named_logger("check")

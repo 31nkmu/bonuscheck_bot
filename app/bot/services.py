@@ -29,7 +29,7 @@ class BotService:
     @log.catch
     def start(self):
         """Запуск бот сервиса. Регистрирует обработчики и запускает поллинг."""
-        user_handler = BotHandler(self.dp, self.log, self.bi, self.kb)
+        user_handler = BotHandler(self.dp, self.log, self.bi, self.kb, self.pchi)
 
         # Работа с ролями тут. Этот фильтр ставит роли!!!
         # self.dp.middleware.setup(RoleMiddleware())
