@@ -1,4 +1,5 @@
 import io
+import os
 from typing import Optional
 
 import cv2
@@ -10,9 +11,11 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery
 import logging
 from aiogram.dispatcher.filters import Text
-from loguru import logger
+from asgiref.sync import sync_to_async
 from loguru._logger import Logger
 from pyzbar import pyzbar
+from django.db import connection
+import pandas as pd
 
 from bot.keyboards.keyboards import KeyboardManager
 from interface.backend import BackendInterface
@@ -43,12 +46,15 @@ class BotHandler:
     def register_user_handlers(self):
         # Логика проверки кода в таблице
         self.dp.register_message_handler(self.start, commands=['start'], state='*')
+        self.dp.register_message_handler(self.admin, commands=['admin'], state='*')
         self.dp.register_message_handler(self.enter_code, state=FSM.enter_code)
         self.dp.register_message_handler(self.send_check, state=FSM.send_check, content_types=types.ContentTypes.PHOTO)
 
         self.dp.register_callback_query_handler(self.download_check, Text('download_check'), state='*')
         self.dp.register_callback_query_handler(self.personal_area, Text('personal_area'), state='*')
         self.dp.register_callback_query_handler(self.check_statistic, Text('check_statistic'), state='*')
+        self.dp.register_callback_query_handler(self.check_treatment, Text('check_treatment'), state='*')
+        self.dp.register_callback_query_handler(self.get_back, Text('get_back'), state='*')
 
     @staticmethod
     async def edit_page(message: Message,
@@ -106,6 +112,12 @@ class BotHandler:
         finally:
             await self.bot.delete_message(chat_id=message.chat.id, message_id=message_to_delete)
 
+    async def admin(self, message: Message, state: FSMContext):
+        await state.finish()
+        kb = await self.kb.get_admin_kb()
+        await self.bot.send_message(reply_markup=kb, chat_id=message.chat.id,
+                                    text='Ваш выбор')
+
     async def send_check(self, message: types.Message, state: FSMContext):
         """
         Срабатывает после того как пользователь отправит фотографию с чеком
@@ -130,12 +142,12 @@ class BotHandler:
                     await self.bot.send_message(chat_id=message.chat.id, text=have_qr_text)
                     return
                 if operation_type != 1 or is_have_codeword is False:
+                    await self.bi.write_bad_qr_to_db(qr_raw=qr_raw, chat_id=message.from_user.id)
                     find_not_qr_text = 'В qr code не найдены нужные ключевые слова\nПопробуйте еще раз'
                     await FSM.send_check.set()
                     await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text)
                 else:
                     message_to_delete_bonus = (await message.answer('⌛Начисляем бонусы. . .'))['message_id']
-                    # TODO: Начислять бонусы
                     is_gave_bonus = await self.bi.give_bonus_write_qr(qr_raw=qr_raw, chat_id=message.from_user.id)
                     gave_bonus_text = 'Бонусы успешно начислены'
                     if is_gave_bonus is True:
@@ -162,7 +174,8 @@ class BotHandler:
         """
         await state.finish()
         await FSM.send_check.set()
-        await cb.bot.send_message(chat_id=cb.message.chat.id, text='Отправьте фотографию с чеком')
+        back_kb = await self.kb.get_back()
+        await cb.bot.send_message(chat_id=cb.message.chat.id, text='Отправьте фотографию с чеком', reply_markup=back_kb)
 
     async def personal_area(self, cb: CallbackQuery, state: FSMContext):
         """
@@ -170,16 +183,32 @@ class BotHandler:
         """
         await state.finish()
         personal_area_kb = await self.kb.get_personal_area_kb()
-        await cb.bot.send_message(chat_id=cb.message.chat.id, reply_markup=personal_area_kb, text='Ваш выбор')
+        user_obj = await self.bi.get_user(tg_id=cb.from_user.id)
+        processed_count = await self.bi.get_processed_count(user_obj)
+        accepted_count = await self.bi.get_accepted_count(user_obj)
+        reject_count = await self.bi.get_reject_count(user_obj)
+        personal_data_text = f'баланс {user_obj.bonus_balance}\n' \
+                             f'код {user_obj.code.title}\n' \
+                             f'Обработанные  {processed_count}\n' \
+                             f'Принятые {accepted_count}\n' \
+                             f'Отклоненные {reject_count}'
+        await cb.bot.send_message(chat_id=cb.message.chat.id, reply_markup=personal_area_kb, text=personal_data_text)
 
     async def check_statistic(self, cb: CallbackQuery, state: FSMContext):
         """
         Выводит статистику чеков
         """
         await state.finish()
-        user = await self.bi.get_user(tg_id=cb.from_user.id)
-        check_amount = await self.bi.get_all_check_amount(user)
-        await cb.bot.send_message(chat_id=cb.message.chat.id, text=check_amount)
+        await self.export_table_to_excel()
+        await self.send_excel_file(cb.message.chat.id)
+
+    async def check_treatment(self, cb: CallbackQuery, state: FSMContext):
+        """
+        Обработка чеков
+        """
+        # TODO: Настроить обработку чеков
+        await state.finish()
+        await cb.bot.send_message(chat_id=cb.message.chat.id, text='Обработка')
 
     async def get_qr_code_by_file_id(self, file_id):
         """
@@ -199,3 +228,42 @@ class BotHandler:
                 # Извлечение данных из QR-кода
                 data = barcode.data.decode("utf-8")
                 return data
+
+    async def get_back(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        kb = await self.kb.get_paid_kb()
+        await cb.message.edit_reply_markup(reply_markup=kb)
+
+    @sync_to_async
+    def export_table_to_excel(self):
+        # Получить данные из базы данных
+        with connection.cursor() as cursor:
+            cursor.execute("""
+            SELECT
+            uc.keycode, uu.tg_id, uu.bonus_balance, ch_processed.qr_data as "is processed", ch_reject.qr_data as "is reject", ch_accepted.qr_data as "is accepted"
+            FROM
+                users_code uc
+            JOIN
+                users_users uu ON uc.id = uu.code_id
+            LEFT OUTER JOIN
+                users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_processed = true
+            LEFT OUTER JOIN
+                users_check ch_reject ON uu.id = ch_reject.owner_id AND ch_reject.is_reject = true
+            LEFT OUTER JOIN
+                users_check ch_accepted ON uu.id = ch_accepted.owner_id AND ch_accepted.is_accepted = true AND ch_accepted.is_processed = false
+            """)
+            rows = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
+
+        # Создать DataFrame из данных
+        df = pd.DataFrame(rows, columns=column_names)
+        # Сохранить DataFrame в файл Excel
+        df.to_excel('data.xlsx', index=False)
+
+    async def send_excel_file(self, chat_id):
+        # Отправить файл Excel в Telegram
+        with open('data.xlsx', 'rb') as file:
+            await self.dp.bot.send_document(chat_id, file)
+
+        # Удалить файл после отправки
+        os.remove('data.xlsx')

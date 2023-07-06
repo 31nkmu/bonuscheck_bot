@@ -40,7 +40,13 @@ class Check(models.Model):
     owner = models.ForeignKey("Users", on_delete=models.CASCADE, related_name="checks")
 
     qr_data = models.CharField(max_length=120, unique=True)
+    # Обработан
     is_processed = models.BooleanField(default=False)
+    # Принят
+    is_accepted = models.BooleanField(default=True)
+    # Отклонен
+    is_reject = models.BooleanField(default=False)
+    bonus_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
         return self.qr_data

@@ -8,7 +8,7 @@ from config.settings import BACKEND_LOGGER as log
 class UserInterfaceMixin:
     @staticmethod
     def __get_user(tg_id: str):
-        user = Users.objects.get(tg_id=tg_id)
+        user = Users.objects.select_related().get(tg_id=tg_id)
         return user
 
     @staticmethod
@@ -68,11 +68,24 @@ class CheckInterfaceMixin:
         try:
             with transaction.atomic():
                 owner = Users.objects.get(tg_id=chat_id)
-                Check.objects.create(owner=owner, qr_data=qr_raw)
+                Check.objects.create(owner=owner, qr_data=qr_raw, is_processed=True, bonus_balance=100)
                 # TODO: узнать сколько баланса начислить
-                owner.bonus_balance = 100
+                owner.bonus_balance += 100
                 owner.save()
                 return True
+        except Exception as err:
+            log.error(err)
+            return False
+
+    @sync_to_async
+    def write_bad_qr_to_db(self, qr_raw, chat_id):
+        """
+        Записывает qr в базу данных без начисления бонусов
+        """
+        try:
+            owner = Users.objects.get(tg_id=chat_id)
+            Check.objects.create(owner=owner, qr_data=qr_raw)
+            return True
         except Exception as err:
             log.error(err)
             return False
@@ -86,6 +99,30 @@ class CheckInterfaceMixin:
         except Exception as err:
             log.error(err)
             return False
+
+    @sync_to_async
+    def get_processed_count(self, user_obj):
+        try:
+            return user_obj.checks.filter(is_processed=True).count()
+        except Exception as err:
+            log.error(err)
+            return 0
+
+    @sync_to_async
+    def get_accepted_count(self, user_obj):
+        try:
+            return user_obj.checks.filter(is_accepted=True, is_processed=False).count()
+        except Exception as err:
+            log.error(err)
+            return 0
+
+    @sync_to_async
+    def get_reject_count(self, user_obj):
+        try:
+            return user_obj.checks.filter(is_reject=True).count()
+        except Exception as err:
+            log.error(err)
+            return 0
 
 
 class OutputInterfaceMixin:

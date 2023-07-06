@@ -13,5 +13,20 @@ class KeyboardManager:
     @staticmethod
     async def get_personal_area_kb() -> types.InlineKeyboardMarkup:
         kb = types.InlineKeyboardMarkup()
+        # kb.add(types.InlineKeyboardButton(text='Статистика чеков', callback_data='check_statistic'))
+        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
+        return kb
+
+    @staticmethod
+    async def get_back() -> types.InlineKeyboardMarkup:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
+        return kb
+
+    @staticmethod
+    async def get_admin_kb() -> types.InlineKeyboardMarkup:
+        kb = types.InlineKeyboardMarkup()
         kb.add(types.InlineKeyboardButton(text='Статистика чеков', callback_data='check_statistic'))
+        kb.add(types.InlineKeyboardButton(text='Обработка чеков', callback_data='check_treatment'))
+        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
         return kb
