@@ -93,6 +93,9 @@ class CheckInterfaceMixin:
 
     @sync_to_async
     def is_have_qr(self, qr_raw):
+        """
+        Проверяет есть ли qr code в бд
+        """
         try:
             if Check.objects.filter(qr_data=qr_raw).exists():
                 return True
@@ -103,6 +106,9 @@ class CheckInterfaceMixin:
 
     @sync_to_async
     def get_processed_count(self, user_obj):
+        """
+        Получает количесто обработанных чеков
+        """
         try:
             return user_obj.checks.filter(is_processed=True).count()
         except Exception as err:
@@ -111,6 +117,9 @@ class CheckInterfaceMixin:
 
     @sync_to_async
     def get_accepted_count(self, user_obj):
+        """
+        Получает количество принятых чеков
+        """
         try:
             return user_obj.checks.filter(is_accepted=True, is_processed=False).count()
         except Exception as err:
@@ -119,6 +128,9 @@ class CheckInterfaceMixin:
 
     @sync_to_async
     def get_reject_count(self, user_obj):
+        """
+        Получает количество отклоненных чеков
+        """
         try:
             return user_obj.checks.filter(is_reject=True).count()
         except Exception as err:
@@ -127,12 +139,33 @@ class CheckInterfaceMixin:
 
     @sync_to_async
     def get_all_accepted_qr(self):
+        """
+        Получает все принятые чеки
+        """
         try:
             res = Check.objects.filter(is_accepted=True).all()
             return list(res)
         except Exception as err:
             log.error(err)
             return []
+
+    @sync_to_async
+    def write_bonus_accepted_qr(self, qr_row, bonus):
+        """
+        Админ дает бонусы
+        """
+        try:
+            with transaction.atomic():
+                check = Check.objects.select_related().get(qr_data=qr_row)
+                owner = check.owner
+                owner.bonus_balance += bonus
+                check.is_processed = True
+                check.is_accepted = False
+                check.bonus_balance = bonus
+                check.save(update_fields=('is_processed', 'is_accepted', 'bonus_balance'))
+                owner.save(update_fields=('bonus_balance',))
+        except Exception as err:
+            log.error(err)
 
 
 class OutputInterfaceMixin:

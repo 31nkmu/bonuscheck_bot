@@ -1,3 +1,4 @@
+import functools
 import io
 import os
 from typing import Optional
@@ -27,6 +28,7 @@ class FSM(StatesGroup):
     enter_code = State()
     send_check = State()
     admin_menu = State()
+    give_bonus = State()
 
 
 class BotHandler:
@@ -52,6 +54,7 @@ class BotHandler:
         self.dp.register_message_handler(self.start, commands=['start'], state='*')
         self.dp.register_message_handler(self.admin, commands=['admin'], state='*')
         self.dp.register_message_handler(self.enter_code, state=FSM.enter_code)
+
         self.dp.register_message_handler(self.admin_menu, state=FSM.admin_menu, content_types=types.ContentTypes.ANY)
         self.dp.register_message_handler(self.send_check, state=FSM.send_check, content_types=types.ContentTypes.PHOTO)
 
@@ -61,6 +64,7 @@ class BotHandler:
         self.dp.register_callback_query_handler(self.check_treatment, Text('check_treatment'), state='*')
         self.dp.register_callback_query_handler(self.get_back, Text('get_back'), state='*')
         self.dp.register_callback_query_handler(self.accrue, Text('accrue'), state='*')
+        self.dp.register_callback_query_handler(self.get_back_admin, Text('get_back_admin'), state='*')
 
     @staticmethod
     async def edit_page(message: Message,
@@ -229,7 +233,8 @@ class BotHandler:
         try:
             next_check = next(self.check_iter)
             kb = await self.kb.get_accepted_kb(next_check)
-            await cb.message.answer(f'{next_check}, такой', reply_markup=kb)
+            # TODO: Добавить больше информации о чеке
+            await cb.message.answer(f'{next_check}', reply_markup=kb)
         except StopIteration:
             await self.bot.send_message(chat_id=cb.message.chat.id, text='Все чеки обработаны')
 
@@ -255,6 +260,11 @@ class BotHandler:
     async def get_back(self, cb: CallbackQuery, state: FSMContext):
         await state.finish()
         kb = await self.kb.get_paid_kb()
+        await cb.message.edit_reply_markup(reply_markup=kb)
+
+    async def get_back_admin(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        kb = await self.kb.get_admin_kb()
         await cb.message.edit_reply_markup(reply_markup=kb)
 
     @sync_to_async
@@ -337,7 +347,17 @@ class BotHandler:
         """
         Отвечает за начисление обработанных чеков
         """
-        # await state.finish()
+        await state.finish()
         accepted_check = cb.message.text
         await self.bot.send_message(chat_id=cb.message.chat.id, text=accepted_check)
+        await FSM.give_bonus.set()
+        partial_handler = functools.partial(self.give_bonus, cb=cb, check=accepted_check)
+        self.dp.register_message_handler(partial_handler, state=FSM.give_bonus, content_types=types.ContentTypes.TEXT)
+        await self.bot.send_message(chat_id=cb.message.chat.id, text='Введите баланс, который хотите начислить')
+
+    async def give_bonus(self, message: types.Message, state: FSMContext, cb: CallbackQuery, check):
+        await state.finish()
+        check = check.replace(' ', '').split(',')[0]
+        await self.bot.send_message(chat_id=message.chat.id, text=f'даем бонус {check}, {message.text}')
+        await self.bi.write_bonus_accepted_qr(qr_row=check, bonus=int(message.text))
         await self.process_next_check(cb)

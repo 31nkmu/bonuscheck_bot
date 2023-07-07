@@ -36,5 +36,5 @@ class KeyboardManager:
         kb = types.InlineKeyboardMarkup()
         kb.add(types.InlineKeyboardButton(text='Начислить', callback_data='accrue'))
         kb.add(types.InlineKeyboardButton(text='Отклонить', callback_data='reject'))
-        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
+        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back_admin'))
         return kb
