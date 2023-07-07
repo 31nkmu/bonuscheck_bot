@@ -162,8 +162,18 @@ class CheckInterfaceMixin:
                 check.is_processed = True
                 check.is_accepted = False
                 check.bonus_balance = bonus
-                check.save(update_fields=('is_processed', 'is_accepted', 'bonus_balance'))
+                check.save()
                 owner.save(update_fields=('bonus_balance',))
+        except Exception as err:
+            log.error(err)
+
+    @sync_to_async
+    def reject_qr(self, qr_row):
+        try:
+            check = Check.objects.select_related().get(qr_data=qr_row)
+            check.is_accepted = False
+            check.is_reject = True
+            check.save(update_fields=('is_accepted', 'is_reject'))
         except Exception as err:
             log.error(err)
 

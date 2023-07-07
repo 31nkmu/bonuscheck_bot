@@ -64,7 +64,9 @@ class BotHandler:
         self.dp.register_callback_query_handler(self.check_treatment, Text('check_treatment'), state='*')
         self.dp.register_callback_query_handler(self.get_back, Text('get_back'), state='*')
         self.dp.register_callback_query_handler(self.accrue, Text('accrue'), state='*')
+        self.dp.register_callback_query_handler(self.reject, Text('reject'), state='*')
         self.dp.register_callback_query_handler(self.get_back_admin, Text('get_back_admin'), state='*')
+
 
     @staticmethod
     async def edit_page(message: Message,
@@ -223,13 +225,15 @@ class BotHandler:
         """
         Обработка чеков`
         """
-        # TODO: Настроить обработку чеков
         await state.finish()
         accepted_check_list = await self.bi.get_all_accepted_qr()
         self.check_iter = iter(accepted_check_list)
         await self.process_next_check(cb)
 
     async def process_next_check(self, cb: CallbackQuery):
+        """
+        Получение следующего чека
+        """
         try:
             next_check = next(self.check_iter)
             kb = await self.kb.get_accepted_kb(next_check)
@@ -350,14 +354,25 @@ class BotHandler:
         await state.finish()
         accepted_check = cb.message.text
         await self.bot.send_message(chat_id=cb.message.chat.id, text=accepted_check)
-        await FSM.give_bonus.set()
+        # TODO: Здесь он не перезаписывает check, постоянно меняет один и тот же
         partial_handler = functools.partial(self.give_bonus, cb=cb, check=accepted_check)
         self.dp.register_message_handler(partial_handler, state=FSM.give_bonus, content_types=types.ContentTypes.TEXT)
+        await FSM.give_bonus.set()
         await self.bot.send_message(chat_id=cb.message.chat.id, text='Введите баланс, который хотите начислить')
 
     async def give_bonus(self, message: types.Message, state: FSMContext, cb: CallbackQuery, check):
         await state.finish()
         check = check.replace(' ', '').split(',')[0]
         await self.bot.send_message(chat_id=message.chat.id, text=f'даем бонус {check}, {message.text}')
-        await self.bi.write_bonus_accepted_qr(qr_row=check, bonus=int(message.text))
+        try:
+            await self.bi.write_bonus_accepted_qr(qr_row=check, bonus=int(message.text))
+        except ValueError:
+            await self.bot.send_message(chat_id=message.chat.id, text='Нужно ввести число')
+        await self.process_next_check(cb)
+
+    async def reject(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        accepted_check = cb.message.text.replace(' ', '').split(',')[0]
+        await self.bi.reject_qr(qr_row=accepted_check)
+        await self.bot.send_message(chat_id=cb.message.chat.id, text=f'чек {accepted_check} был отклонен')
         await self.process_next_check(cb)
