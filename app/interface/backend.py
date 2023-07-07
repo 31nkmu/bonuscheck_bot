@@ -125,6 +125,15 @@ class CheckInterfaceMixin:
             log.error(err)
             return 0
 
+    @sync_to_async
+    def get_all_accepted_qr(self):
+        try:
+            res = Check.objects.filter(is_accepted=True).all()
+            return list(res)
+        except Exception as err:
+            log.error(err)
+            return []
+
 
 class OutputInterfaceMixin:
     pass

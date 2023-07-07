@@ -12,6 +12,7 @@ from aiogram.types import Message, CallbackQuery
 import logging
 from aiogram.dispatcher.filters import Text
 from asgiref.sync import sync_to_async
+from loguru import logger
 from loguru._logger import Logger
 from pyzbar import pyzbar
 from django.db import connection
@@ -29,20 +30,22 @@ class FSM(StatesGroup):
 
 
 class BotHandler:
-    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi"
+    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi", "check_iter"
 
     def __init__(self,
                  dp: Dispatcher,
                  log: Logger,
                  bi: BackendInterface,
                  kb: KeyboardManager,
-                 pchi: ProverkachekaInterface):
+                 pchi: ProverkachekaInterface,
+                 check_iter=None):
         self.dp = dp
         self.bot = dp.bot
         self.log = log
         self.bi = bi
         self.kb = kb
         self.pchi = pchi
+        self.check_iter = check_iter
 
     def register_user_handlers(self):
         # Логика проверки кода в таблице
@@ -57,6 +60,7 @@ class BotHandler:
         self.dp.register_callback_query_handler(self.check_statistic, Text('check_statistic'), state='*')
         self.dp.register_callback_query_handler(self.check_treatment, Text('check_treatment'), state='*')
         self.dp.register_callback_query_handler(self.get_back, Text('get_back'), state='*')
+        self.dp.register_callback_query_handler(self.accrue, Text('accrue'), state='*')
 
     @staticmethod
     async def edit_page(message: Message,
@@ -217,7 +221,17 @@ class BotHandler:
         """
         # TODO: Настроить обработку чеков
         await state.finish()
-        await cb.bot.send_message(chat_id=cb.message.chat.id, text='Обработка')
+        accepted_check_list = await self.bi.get_all_accepted_qr()
+        self.check_iter = iter(accepted_check_list)
+        await self.process_next_check(cb)
+
+    async def process_next_check(self, cb: CallbackQuery):
+        try:
+            next_check = next(self.check_iter)
+            kb = await self.kb.get_accepted_kb(next_check)
+            await cb.message.answer(f'{next_check}, такой', reply_markup=kb)
+        except StopIteration:
+            await self.bot.send_message(chat_id=cb.message.chat.id, text='Все чеки обработаны')
 
     async def get_qr_code_by_file_id(self, file_id):
         """
@@ -318,3 +332,12 @@ class BotHandler:
         os.remove('processed.xlsx')
         os.remove('rejected.xlsx')
         os.remove('accepted.xlsx')
+
+    async def accrue(self, cb: CallbackQuery, state: FSMContext):
+        """
+        Отвечает за начисление обработанных чеков
+        """
+        # await state.finish()
+        accepted_check = cb.message.text
+        await self.bot.send_message(chat_id=cb.message.chat.id, text=accepted_check)
+        await self.process_next_check(cb)

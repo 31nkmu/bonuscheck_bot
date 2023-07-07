@@ -30,3 +30,11 @@ class KeyboardManager:
         kb.add(types.InlineKeyboardButton(text='Обработка чеков', callback_data='check_treatment'))
         kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
         return kb
+
+    @staticmethod
+    async def get_accepted_kb(check) -> types.InlineKeyboardMarkup:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton(text='Начислить', callback_data='accrue'))
+        kb.add(types.InlineKeyboardButton(text='Отклонить', callback_data='reject'))
+        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
+        return kb
