@@ -68,7 +68,8 @@ class CheckInterfaceMixin:
         try:
             with transaction.atomic():
                 owner = Users.objects.get(tg_id=chat_id)
-                Check.objects.create(owner=owner, qr_data=qr_raw, is_processed=True, bonus_balance=100)
+                Check.objects.create(owner=owner, qr_data=qr_raw, is_processed=True, bonus_balance=100,
+                                     is_accepted=False)
                 # TODO: узнать сколько баланса начислить
                 owner.bonus_balance += 100
                 owner.save()

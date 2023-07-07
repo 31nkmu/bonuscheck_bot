@@ -25,6 +25,7 @@ from interface.proverkacheka import ProverkachekaInterface
 class FSM(StatesGroup):
     enter_code = State()
     send_check = State()
+    admin_menu = State()
 
 
 class BotHandler:
@@ -48,6 +49,7 @@ class BotHandler:
         self.dp.register_message_handler(self.start, commands=['start'], state='*')
         self.dp.register_message_handler(self.admin, commands=['admin'], state='*')
         self.dp.register_message_handler(self.enter_code, state=FSM.enter_code)
+        self.dp.register_message_handler(self.admin_menu, state=FSM.admin_menu, content_types=types.ContentTypes.ANY)
         self.dp.register_message_handler(self.send_check, state=FSM.send_check, content_types=types.ContentTypes.PHOTO)
 
         self.dp.register_callback_query_handler(self.download_check, Text('download_check'), state='*')
@@ -113,6 +115,12 @@ class BotHandler:
             await self.bot.delete_message(chat_id=message.chat.id, message_id=message_to_delete)
 
     async def admin(self, message: Message, state: FSMContext):
+        await state.finish()
+        admin_text = 'Вы попали в меню администратора'
+        kb = await self.kb.get_admin_kb()
+        await self.bot.send_message(chat_id=message.chat.id, text=admin_text, reply_markup=kb)
+
+    async def admin_menu(self, message: Message, state: FSMContext):
         await state.finish()
         kb = await self.kb.get_admin_kb()
         await self.bot.send_message(reply_markup=kb, chat_id=message.chat.id,
@@ -201,10 +209,11 @@ class BotHandler:
         await state.finish()
         await self.export_table_to_excel()
         await self.send_excel_file(cb.message.chat.id)
+        await self.admin_menu(cb.message, state)
 
     async def check_treatment(self, cb: CallbackQuery, state: FSMContext):
         """
-        Обработка чеков
+        Обработка чеков`
         """
         # TODO: Настроить обработку чеков
         await state.finish()
@@ -240,15 +249,49 @@ class BotHandler:
         with connection.cursor() as cursor:
             cursor.execute("""
             SELECT
-            uc.keycode, uu.tg_id, uu.bonus_balance, ch_processed.qr_data as "is processed", ch_reject.qr_data as "is reject", ch_accepted.qr_data as "is accepted"
+                uc.keycode, uu.tg_id, uu.bonus_balance, ch_processed.qr_data as "is processed"
             FROM
                 users_code uc
             JOIN
                 users_users uu ON uc.id = uu.code_id
             LEFT OUTER JOIN
                 users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_processed = true
+            """)
+            rows = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
+
+        # Создать DataFrame из данных
+        df = pd.DataFrame(rows, columns=column_names)
+        # Сохранить DataFrame в файл Excel
+        df.to_excel('processed.xlsx', index=False)
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+            SELECT
+                uc.keycode, uu.tg_id, uu.bonus_balance, ch_reject.qr_data as "is reject"
+            FROM
+                users_code uc
+            JOIN
+                users_users uu ON uc.id = uu.code_id
             LEFT OUTER JOIN
                 users_check ch_reject ON uu.id = ch_reject.owner_id AND ch_reject.is_reject = true
+            """)
+            rows = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
+
+        # Создать DataFrame из данных
+        df = pd.DataFrame(rows, columns=column_names)
+        # Сохранить DataFrame в файл Excel
+        df.to_excel('rejected.xlsx', index=False)
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+            SELECT
+                uc.keycode, uu.tg_id, uu.bonus_balance, ch_accepted.qr_data as "is accepted"
+            FROM
+                users_code uc
+            JOIN
+                users_users uu ON uc.id = uu.code_id
             LEFT OUTER JOIN
                 users_check ch_accepted ON uu.id = ch_accepted.owner_id AND ch_accepted.is_accepted = true AND ch_accepted.is_processed = false
             """)
@@ -258,12 +301,20 @@ class BotHandler:
         # Создать DataFrame из данных
         df = pd.DataFrame(rows, columns=column_names)
         # Сохранить DataFrame в файл Excel
-        df.to_excel('data.xlsx', index=False)
+        df.to_excel('accepted.xlsx', index=False)
 
     async def send_excel_file(self, chat_id):
         # Отправить файл Excel в Telegram
-        with open('data.xlsx', 'rb') as file:
+        with open('processed.xlsx', 'rb') as file:
+            await self.dp.bot.send_document(chat_id, file)
+
+        with open('rejected.xlsx', 'rb') as file:
+            await self.dp.bot.send_document(chat_id, file)
+
+        with open('accepted.xlsx', 'rb') as file:
             await self.dp.bot.send_document(chat_id, file)
 
         # Удалить файл после отправки
-        os.remove('data.xlsx')
+        os.remove('processed.xlsx')
+        os.remove('rejected.xlsx')
+        os.remove('accepted.xlsx')
