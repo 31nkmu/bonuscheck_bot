@@ -32,7 +32,7 @@ class FSM(StatesGroup):
 
 
 class BotHandler:
-    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi", "check_iter"
+    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi", "check_iter", "accrue_handler"
 
     def __init__(self,
                  dp: Dispatcher,
@@ -40,7 +40,8 @@ class BotHandler:
                  bi: BackendInterface,
                  kb: KeyboardManager,
                  pchi: ProverkachekaInterface,
-                 check_iter=None):
+                 check_iter=None,
+                 accrue_handler=None):
         self.dp = dp
         self.bot = dp.bot
         self.log = log
@@ -48,6 +49,7 @@ class BotHandler:
         self.kb = kb
         self.pchi = pchi
         self.check_iter = check_iter
+        self.accrue_handler = accrue_handler
 
     def register_user_handlers(self):
         # Логика проверки кода в таблице
@@ -66,7 +68,6 @@ class BotHandler:
         self.dp.register_callback_query_handler(self.accrue, Text('accrue'), state='*')
         self.dp.register_callback_query_handler(self.reject, Text('reject'), state='*')
         self.dp.register_callback_query_handler(self.get_back_admin, Text('get_back_admin'), state='*')
-
 
     @staticmethod
     async def edit_page(message: Message,
@@ -354,9 +355,10 @@ class BotHandler:
         await state.finish()
         accepted_check = cb.message.text
         await self.bot.send_message(chat_id=cb.message.chat.id, text=accepted_check)
-        # TODO: Здесь он не перезаписывает check, постоянно меняет один и тот же
-        partial_handler = functools.partial(self.give_bonus, cb=cb, check=accepted_check)
-        self.dp.register_message_handler(partial_handler, state=FSM.give_bonus, content_types=types.ContentTypes.TEXT)
+        if self.accrue_handler is not None:
+            self.dp.message_handlers.unregister(self.accrue_handler)
+        self.accrue_handler = functools.partial(self.give_bonus, cb=cb, check=accepted_check)
+        self.dp.register_message_handler(self.accrue_handler, state=FSM.give_bonus, content_types=types.ContentTypes.TEXT)
         await FSM.give_bonus.set()
         await self.bot.send_message(chat_id=cb.message.chat.id, text='Введите баланс, который хотите начислить')
 
