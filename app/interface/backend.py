@@ -5,6 +5,19 @@ from applications.users.models import Code, Users, Check, CodeWord, Product
 from config.settings import BACKEND_LOGGER as log
 
 
+class ProductInterfaceMixin:
+    @sync_to_async
+    def get_products_text(self, check) -> str:
+        """
+        Получает информацию о продуктах чека
+        """
+        product_list = check.products.all()
+        info = [f'Название: {product.name}\nКоличество {product.quantity}\nЦена {product.price}\nЧек: {check}' for
+                product in product_list]
+        res = ('\n\n').join(info)
+        return res
+
+
 class UserInterfaceMixin:
     @staticmethod
     def __get_user(tg_id: str):
@@ -74,7 +87,7 @@ class CheckInterfaceMixin:
                 for product in product_list:
                     product_obj_list.append(
                         Product(check_field=check_obj, price=product['price'], name=product['name'],
-                                               quantity=product['quantity'])
+                                quantity=product['quantity'])
                     )
 
                 # TODO: узнать сколько баланса начислить
@@ -87,13 +100,21 @@ class CheckInterfaceMixin:
             return False
 
     @sync_to_async
-    def write_bad_qr_to_db(self, qr_raw, chat_id):
+    def write_bad_qr_to_db(self, qr_raw, chat_id, product_list):
         """
         Записывает qr в базу данных без начисления бонусов
         """
         try:
-            owner = Users.objects.get(tg_id=chat_id)
-            Check.objects.create(owner=owner, qr_data=qr_raw)
+            with transaction.atomic():
+                owner = Users.objects.get(tg_id=chat_id)
+                check_obj = Check.objects.create(owner=owner, qr_data=qr_raw)
+                product_obj_list = []
+                for product in product_list:
+                    product_obj_list.append(
+                        Product(check_field=check_obj, price=product['price'], name=product['name'],
+                                quantity=product['quantity'])
+                    )
+                Product.objects.bulk_create(product_obj_list)
             return True
         except Exception as err:
             log.error(err)
@@ -211,5 +232,5 @@ class CodeWordMixin:
 
 
 class BackendInterface(UserInterfaceMixin, CodeInterfaceMixin, CheckInterfaceMixin, OutputInterfaceMixin,
-                       CodeWordMixin):
+                       CodeWordMixin, ProductInterfaceMixin):
     pass

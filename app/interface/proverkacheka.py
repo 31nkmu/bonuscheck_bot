@@ -16,34 +16,28 @@ class ProverkachekaInterface:
         product_list = []
         qr_raw = None
         operation_type = None
-        res = {
-            'name': '',
-            'quantity': 0,
-            'price': 0,
-        }
-        items = data.get('data').get('json').get('items')
+        try:
+            items = data.get('data').get('json').get('items')
+        except Exception as err:
+            log.warning(err)
+            items = []
         try:
             operation_type = int(data.get('data').get('json').get('operationType'))
         except Exception as err:
-            log.error(err)
+            log.warning(err)
         try:
             qr_raw = data.get('request').get('qrraw')
         except Exception as err:
-            log.error(err)
+            log.warning(err)
         for product in items:
             try:
-                res['name'] = product.get('name').lower()
+                product_list.append({
+                    'name': product.get('name').lower(),
+                    'quantity': int(product.get('quantity')),
+                    'price': float(product.get('price'))
+                })
             except Exception as err:
-                log.error(err)
-            try:
-                res['quantity'] = int(product.get('quantity'))
-            except Exception as err:
-                log.error(err)
-            try:
-                res['price'] = float(product.get('price'))
-            except Exception as err:
-                log.error(err)
-            product_list.append(res)
+                log.warning(err)
         return qr_raw, operation_type, product_list
 
     @sync_to_async

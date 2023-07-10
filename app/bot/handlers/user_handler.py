@@ -158,7 +158,8 @@ class BotHandler:
                     await self.bot.send_message(chat_id=message.chat.id, text=have_qr_text, reply_markup=kb)
                     return
                 if operation_type != 1 or len(have_codeword_products) == 0:
-                    await self.bi.write_bad_qr_to_db(qr_raw=qr_raw, chat_id=message.from_user.id)
+                    await self.bi.write_bad_qr_to_db(qr_raw=qr_raw, chat_id=message.from_user.id,
+                                                     product_list=product_list)
                     find_not_qr_text = 'В qr code не найдены нужные ключевые слова\nПопробуйте еще раз'
                     await FSM.send_check.set()
                     await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text, reply_markup=kb)
@@ -239,9 +240,13 @@ class BotHandler:
             next_check = next(self.check_iter)
             kb = await self.kb.get_accepted_kb(next_check)
             # TODO: Добавить больше информации о чеке
-            await cb.message.answer(f'{next_check}', reply_markup=kb)
+            # список продуктов чека
+            res = await self.bi.get_products_text(next_check)
+
+            await cb.message.answer(f'{res}', reply_markup=kb)
         except StopIteration:
-            await self.bot.send_message(chat_id=cb.message.chat.id, text='Все чеки обработаны')
+            kb = await self.kb.get_admin_kb()
+            await self.bot.send_message(chat_id=cb.message.chat.id, text='Все чеки обработаны', reply_markup=kb)
 
     async def get_back(self, cb: CallbackQuery, state: FSMContext):
         await state.finish()
@@ -356,7 +361,7 @@ class BotHandler:
 
     async def reject(self, cb: CallbackQuery, state: FSMContext):
         await state.finish()
-        accepted_check = cb.message.text.replace(' ', '').split(',')[0]
+        accepted_check = cb.message.text.split('\n')[-1].split(' ')[-1]
         await self.bi.reject_qr(qr_row=accepted_check)
         await self.bot.send_message(chat_id=cb.message.chat.id, text=f'чек {accepted_check} был отклонен')
         await self.process_next_check(cb)
