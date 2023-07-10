@@ -1,7 +1,7 @@
 from asgiref.sync import sync_to_async
 from django.db import transaction
 
-from applications.users.models import Code, Users, Check, CodeWord, Product
+from applications.users.models import Code, Users, Check, CodeWord, Product, Output
 from config.settings import BACKEND_LOGGER as log
 
 
@@ -23,6 +23,13 @@ class UserInterfaceMixin:
     def __get_user(tg_id: str):
         user = Users.objects.select_related().get(tg_id=tg_id)
         return user
+
+    def get_all_admin_tg_id(self):
+        try:
+            admins = Users.objects.filter(is_admin=True).all()
+            return [admin.tg_id for admin in admins]
+        except Exception as err:
+            return []
 
     @staticmethod
     @sync_to_async
@@ -208,7 +215,14 @@ class CheckInterfaceMixin:
 
 
 class OutputInterfaceMixin:
-    pass
+    @sync_to_async
+    def create_output(self, user_obj, balance):
+        try:
+            Output.objects.create(owner=user_obj, amount=balance)
+            return True
+        except Exception as err:
+            log.error(err)
+            return False
 
 
 class CodeWordMixin:

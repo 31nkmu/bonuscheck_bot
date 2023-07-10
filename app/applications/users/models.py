@@ -73,10 +73,17 @@ class Output(models.Model):
     """
     Заявка на вывод
     """
+    STATUS_CHOICES = [
+        ('processing', 'В обработке'),
+        ('accepted', 'Принят'),
+        ('rejected', 'Отклонен'),
+    ]
+
     owner = models.ForeignKey("Users", on_delete=models.CASCADE, related_name="outputs")
 
     amount = models.PositiveIntegerField(default=1)
     is_paid = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='processing')
 
     def __str__(self):
         return str(self.amount)

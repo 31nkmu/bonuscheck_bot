@@ -3,19 +3,15 @@ import io
 import os
 from typing import Optional
 
-import cv2
-import numpy as np
-from PIL import Image
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery
 import logging
 from aiogram.dispatcher.filters import Text
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async, async_to_sync
 from loguru import logger
 from loguru._logger import Logger
-from pyzbar import pyzbar
 from django.db import connection
 import pandas as pd
 
@@ -30,6 +26,7 @@ class FSM(StatesGroup):
     send_check = State()
     admin_menu = State()
     give_bonus = State()
+    take_withdraw = State()
 
 
 class BotHandler:
@@ -63,6 +60,8 @@ class BotHandler:
                                          role=UserRole.ADMIN)
         self.dp.register_message_handler(self.send_check, state=FSM.send_check, content_types=types.ContentTypes.PHOTO,
                                          role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_message_handler(self.take_withdraw, state=FSM.take_withdraw,
+                                         content_types=types.ContentTypes.ANY, role=[UserRole.USER, UserRole.ADMIN])
 
         self.dp.register_callback_query_handler(self.download_check, Text('download_check'), state='*',
                                                 role=[UserRole.USER, UserRole.ADMIN])
@@ -78,6 +77,8 @@ class BotHandler:
         self.dp.register_callback_query_handler(self.reject, Text('reject'), state='*', role=UserRole.ADMIN)
         self.dp.register_callback_query_handler(self.get_back_admin, Text('get_back_admin'), state='*',
                                                 role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.withdraw_funds, Text('withdraw_funds'), state='*',
+                                                role=[UserRole.USER, UserRole.ADMIN])
 
     @staticmethod
     async def edit_page(message: Message,
@@ -212,6 +213,7 @@ class BotHandler:
         Появляется при нажатии на 'Личный кабинет'
         """
         await state.finish()
+
         personal_area_kb = await self.kb.get_personal_area_kb()
         user_obj = await self.bi.get_user(tg_id=cb.from_user.id)
         processed_count = await self.bi.get_processed_count(user_obj)
@@ -383,3 +385,45 @@ class BotHandler:
         await self.bi.reject_qr(qr_row=accepted_check)
         await self.bot.send_message(chat_id=cb.message.chat.id, text=f'чек {accepted_check} был отклонен')
         await self.process_next_check(cb)
+
+    async def withdraw_funds(self, cb: CallbackQuery, state: FSMContext):
+        """
+        Отвечает за запрос от пользователя о выводе средств
+        """
+        await state.finish()
+        kb = await self.kb.get_back()
+        await FSM.take_withdraw.set()
+        await self.bot.send_message(cb.message.chat.id, text='Введите количество бонусов, которые хотите вывести', reply_markup=kb)
+
+    async def take_withdraw(self, message: types.Message, state: FSMContext):
+        """
+        Просит пользователя ввести количество бонусов
+        """
+        balance = float(message.text)
+        user_obj = await self.bi.get_user(message.from_user.id)
+        if balance > user_obj.bonus_balance:
+            kb = await self.kb.get_back()
+            invalid_balance_text = f'Вы не можете вывести больше {user_obj.bonus_balance}. Попробуйте снова'
+            await FSM.take_withdraw.set()
+            await self.bot.send_message(message.chat.id, text=invalid_balance_text, reply_markup=kb)
+            return
+        user_obj = await self.bi.get_user(message.from_user.id)
+        is_created = await self.bi.create_output(user_obj=user_obj, balance=balance)
+        if is_created is True:
+            is_created_text = 'Сообщение о выводе бонусных средств было отправлено на обработку'
+            text_to_admin = f'Пользователь {user_obj.tg_id} хочет вывести {balance}\n' \
+                            f'Его баланс составляет {user_obj.bonus_balance}'
+            kb = await self.kb.get_personal_area_kb()
+            await self.send_messages_to_admin(text_to_admin)
+            await self.bot.send_message(message.from_user.id, is_created_text, reply_markup=kb)
+        else:
+            not_created_text = 'Что-то пошло не так, введите баланс заново'
+            kb = await self.kb.get_back()
+            await FSM.take_withdraw.set()
+            await self.bot.send_message(message.from_user.id, not_created_text, reply_markup=kb)
+
+    @sync_to_async
+    def send_messages_to_admin(self, msg):
+        admin_list = self.bi.get_all_admin_tg_id()
+        for tg_id in admin_list:
+            async_to_sync(self.bot.send_message)(tg_id, msg)
