@@ -239,7 +239,6 @@ class BotHandler:
         try:
             next_check = next(self.check_iter)
             kb = await self.kb.get_accepted_kb(next_check)
-            # TODO: Добавить больше информации о чеке
             # список продуктов чека
             res = await self.bi.get_products_text(next_check)
 
@@ -263,14 +262,17 @@ class BotHandler:
         # Получить данные из базы данных
         with connection.cursor() as cursor:
             cursor.execute("""
-            SELECT
-                uc.keycode, uu.tg_id, uu.bonus_balance, ch_processed.qr_data as "is processed"
-            FROM
-                users_code uc
-            JOIN
-                users_users uu ON uc.id = uu.code_id
-            LEFT OUTER JOIN
-                users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_processed = true
+                SELECT
+                    uc.keycode as "code", uu.tg_id, uu.bonus_balance as "balance", 
+                    ch_processed.qr_data as "qr code", p.name as "product name", p.price, p.quantity
+                FROM
+                    users_code uc
+                JOIN
+                    users_users uu ON uc.id = uu.code_id
+                LEFT OUTER JOIN
+                    users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_processed = true
+                JOIN
+                    users_product p ON ch_processed.id = p.check_field_id
             """)
             rows = cursor.fetchall()
             column_names = [desc[0] for desc in cursor.description]
@@ -278,18 +280,21 @@ class BotHandler:
         # Создать DataFrame из данных
         df = pd.DataFrame(rows, columns=column_names)
         # Сохранить DataFrame в файл Excel
-        df.to_excel('processed.xlsx', index=False)
+        df.to_excel('Обработанные.xlsx', index=False)
 
         with connection.cursor() as cursor:
             cursor.execute("""
-            SELECT
-                uc.keycode, uu.tg_id, uu.bonus_balance, ch_reject.qr_data as "is reject"
-            FROM
-                users_code uc
-            JOIN
-                users_users uu ON uc.id = uu.code_id
-            LEFT OUTER JOIN
-                users_check ch_reject ON uu.id = ch_reject.owner_id AND ch_reject.is_reject = true
+                SELECT
+                    uc.keycode as "code", uu.tg_id, uu.bonus_balance as "balance", 
+                    ch_processed.qr_data as "qr code", p.name as "product name", p.price, p.quantity
+                FROM
+                    users_code uc
+                JOIN
+                    users_users uu ON uc.id = uu.code_id
+                LEFT OUTER JOIN
+                    users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_reject = true
+                JOIN
+                    users_product p ON ch_processed.id = p.check_field_id
             """)
             rows = cursor.fetchall()
             column_names = [desc[0] for desc in cursor.description]
@@ -297,18 +302,21 @@ class BotHandler:
         # Создать DataFrame из данных
         df = pd.DataFrame(rows, columns=column_names)
         # Сохранить DataFrame в файл Excel
-        df.to_excel('rejected.xlsx', index=False)
+        df.to_excel('Отклоненные.xlsx', index=False)
 
         with connection.cursor() as cursor:
             cursor.execute("""
-            SELECT
-                uc.keycode, uu.tg_id, uu.bonus_balance, ch_accepted.qr_data as "is accepted"
-            FROM
-                users_code uc
-            JOIN
-                users_users uu ON uc.id = uu.code_id
-            LEFT OUTER JOIN
-                users_check ch_accepted ON uu.id = ch_accepted.owner_id AND ch_accepted.is_accepted = true AND ch_accepted.is_processed = false
+                SELECT
+                    uc.keycode as "code", uu.tg_id, uu.bonus_balance as "balance", 
+                    ch_processed.qr_data as "qr code", p.name as "product name", p.price, p.quantity
+                FROM
+                    users_code uc
+                JOIN
+                    users_users uu ON uc.id = uu.code_id
+                LEFT OUTER JOIN
+                    users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_accepted = true
+                JOIN
+                    users_product p ON ch_processed.id = p.check_field_id
             """)
             rows = cursor.fetchall()
             column_names = [desc[0] for desc in cursor.description]
@@ -316,23 +324,23 @@ class BotHandler:
         # Создать DataFrame из данных
         df = pd.DataFrame(rows, columns=column_names)
         # Сохранить DataFrame в файл Excel
-        df.to_excel('accepted.xlsx', index=False)
+        df.to_excel('Принятые.xlsx', index=False)
 
     async def send_excel_file(self, chat_id):
         # Отправить файл Excel в Telegram
-        with open('processed.xlsx', 'rb') as file:
+        with open('Обработанные.xlsx', 'rb') as file:
             await self.dp.bot.send_document(chat_id, file)
 
-        with open('rejected.xlsx', 'rb') as file:
+        with open('Отклоненные.xlsx', 'rb') as file:
             await self.dp.bot.send_document(chat_id, file)
 
-        with open('accepted.xlsx', 'rb') as file:
+        with open('Принятые.xlsx', 'rb') as file:
             await self.dp.bot.send_document(chat_id, file)
 
         # Удалить файл после отправки
-        os.remove('processed.xlsx')
-        os.remove('rejected.xlsx')
-        os.remove('accepted.xlsx')
+        os.remove('Обработанные.xlsx')
+        os.remove('Отклоненные.xlsx')
+        os.remove('Принятые.xlsx')
 
     async def accrue(self, cb: CallbackQuery, state: FSMContext):
         """
