@@ -1,7 +1,7 @@
 from asgiref.sync import sync_to_async
 from django.db import transaction
 
-from applications.users.models import Code, Users, Check, CodeWord
+from applications.users.models import Code, Users, Check, CodeWord, Product
 from config.settings import BACKEND_LOGGER as log
 
 
@@ -61,18 +61,26 @@ class CheckInterfaceMixin:
             return 0
 
     @sync_to_async
-    def give_bonus_write_qr(self, qr_raw, chat_id):
+    def give_bonus_write_qr(self, qr_raw, chat_id, product_list):
         """
         Записывает qr в базу данных и начисляет бонусы
         """
         try:
             with transaction.atomic():
                 owner = Users.objects.get(tg_id=chat_id)
-                Check.objects.create(owner=owner, qr_data=qr_raw, is_processed=True, bonus_balance=100,
-                                     is_accepted=False)
+                check_obj = Check.objects.create(owner=owner, qr_data=qr_raw, is_processed=True, bonus_balance=100,
+                                                 is_accepted=False)
+                product_obj_list = []
+                for product in product_list:
+                    product_obj_list.append(
+                        Product(check_field=check_obj, price=product['price'], name=product['name'],
+                                               quantity=product['quantity'])
+                    )
+
                 # TODO: узнать сколько баланса начислить
                 owner.bonus_balance += 100
                 owner.save()
+                Product.objects.bulk_create(product_obj_list)
                 return True
         except Exception as err:
             log.error(err)
@@ -183,7 +191,6 @@ class OutputInterfaceMixin:
 
 
 class CodeWordMixin:
-    @sync_to_async
     def get_codeword_in_text(self, text):
         try:
             codewords = [codeword.word for codeword in CodeWord.objects.all()]
@@ -193,6 +200,14 @@ class CodeWordMixin:
         except Exception as err:
             log.error(err)
             return False
+
+    @sync_to_async
+    def get_have_codeword_products(self, product_list) -> list:
+        try:
+            return [i for i in product_list if self.get_codeword_in_text(i['name'])]
+        except Exception as err:
+            log.error(err)
+            return []
 
 
 class BackendInterface(UserInterfaceMixin, CodeInterfaceMixin, CheckInterfaceMixin, OutputInterfaceMixin,

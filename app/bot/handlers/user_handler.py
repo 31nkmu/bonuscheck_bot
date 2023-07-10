@@ -142,33 +142,30 @@ class BotHandler:
         Срабатывает после того как пользователь отправит фотографию с чеком
         """
         message_to_delete = (await message.answer('⌛Проверяем фотографию. . .'))['message_id']
+        kb = await self.kb.get_back()
         try:
             await state.finish()
             photo = message.photo[-1]
             photo_binary = await photo.download(io.BytesIO())
-            qr_data, code = await self.pchi.get_qr_by_photo(photo_binary)
-            kb = await self.kb.get_back()
+            qr_raw, operation_type, product_list, code = await self.pchi.get_qr_by_photo(photo_binary)
             if code == 1:
-                name = qr_data['name']
-                quantity = qr_data['quantity']
-                operation_type = qr_data['operationType']
-                qr_raw = qr_data['qr_raw']
                 # проверяет есть ли кодовое слово
-                is_have_codeword = await self.bi.get_codeword_in_text(name)
+                have_codeword_products = await self.bi.get_have_codeword_products(product_list)
                 is_have_qr = await self.bi.is_have_qr(qr_raw)
                 if is_have_qr is True:
                     have_qr_text = 'qr code уже был использован\nПопробуйте еще раз'
                     await FSM.send_check.set()
                     await self.bot.send_message(chat_id=message.chat.id, text=have_qr_text, reply_markup=kb)
                     return
-                if operation_type != 1 or is_have_codeword is False:
+                if operation_type != 1 or len(have_codeword_products) == 0:
                     await self.bi.write_bad_qr_to_db(qr_raw=qr_raw, chat_id=message.from_user.id)
                     find_not_qr_text = 'В qr code не найдены нужные ключевые слова\nПопробуйте еще раз'
                     await FSM.send_check.set()
                     await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text, reply_markup=kb)
                 else:
                     message_to_delete_bonus = (await message.answer('⌛Начисляем бонусы. . .'))['message_id']
-                    is_gave_bonus = await self.bi.give_bonus_write_qr(qr_raw=qr_raw, chat_id=message.from_user.id)
+                    is_gave_bonus = await self.bi.give_bonus_write_qr(qr_raw=qr_raw, chat_id=message.from_user.id,
+                                                                      product_list=product_list)
                     gave_bonus_text = 'Бонусы успешно начислены,\nМожете отправить следующий чек'
                     if is_gave_bonus is True:
                         await FSM.send_check.set()
@@ -176,16 +173,17 @@ class BotHandler:
                     else:
                         find_not_qr_text = 'Что-то пошло не так\nПопробуйте еще раз'
                         await FSM.send_check.set()
-                        await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text)
+                        await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text, reply_markup=kb)
                     await self.bot.delete_message(chat_id=message.chat.id, message_id=message_to_delete_bonus)
             else:
                 find_not_qr_text = 'Не могу найти на этой фотографии qr code\nПопробуйте еще раз'
                 await FSM.send_check.set()
-                await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text)
+                await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text, reply_markup=kb)
         except Exception as err:
             logging.exception(err)
+            await FSM.send_check.set()
             await self.bot.send_message(chat_id=message.chat.id,
-                                        text="❌Ошибка при проверке чека.")
+                                        text="❌Ошибка при проверке чека.\nПопробуйте еще раз", reply_markup=kb)
         finally:
             await self.bot.delete_message(chat_id=message.chat.id, message_id=message_to_delete)
 
@@ -244,25 +242,6 @@ class BotHandler:
             await cb.message.answer(f'{next_check}', reply_markup=kb)
         except StopIteration:
             await self.bot.send_message(chat_id=cb.message.chat.id, text='Все чеки обработаны')
-
-    async def get_qr_code_by_file_id(self, file_id):
-        """
-        Находит qr code по фотографии
-        """
-        # Загрузка изображения по file_id
-        image_bytes = await self.bot.download_file_by_id(file_id)
-        image = Image.open(io.BytesIO(image_bytes.read()))
-        gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-
-        # Поиск QR-кодов
-        barcodes = pyzbar.decode(gray)
-
-        # Обработка найденных QR-кодов
-        if len(barcodes) > 0:
-            for barcode in barcodes:
-                # Извлечение данных из QR-кода
-                data = barcode.data.decode("utf-8")
-                return data
 
     async def get_back(self, cb: CallbackQuery, state: FSMContext):
         await state.finish()
@@ -360,7 +339,8 @@ class BotHandler:
         if self.accrue_handler is not None:
             self.dp.message_handlers.unregister(self.accrue_handler)
         self.accrue_handler = functools.partial(self.give_bonus, cb=cb, check=accepted_check)
-        self.dp.register_message_handler(self.accrue_handler, state=FSM.give_bonus, content_types=types.ContentTypes.TEXT)
+        self.dp.register_message_handler(self.accrue_handler, state=FSM.give_bonus,
+                                         content_types=types.ContentTypes.TEXT)
         await FSM.give_bonus.set()
         await self.bot.send_message(chat_id=cb.message.chat.id, text='Введите баланс, который хотите начислить')
 

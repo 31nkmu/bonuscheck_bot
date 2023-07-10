@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import requests
 from asgiref.sync import sync_to_async
 
@@ -7,33 +9,42 @@ from config.settings import CHECK_TOKEN, CHECK_LOGGER as log
 class ProverkachekaInterface:
     token = CHECK_TOKEN
 
-    def __get_filtered_data(self, data):
+    def __get_filtered_data(self, data) -> Tuple[str, int, list]:
         """
         Получает из данных только name, quantity и operationType
         """
+        product_list = []
+        qr_raw = None
+        operation_type = None
         res = {
             'name': '',
             'quantity': 0,
-            'operationType': 0,
-            'qr_raw': 0,
+            'price': 0,
         }
+        items = data.get('data').get('json').get('items')
         try:
-            res['name'] = data.get('data').get('json').get('items')[0].get('name').lower()
+            operation_type = int(data.get('data').get('json').get('operationType'))
         except Exception as err:
             log.error(err)
         try:
-            res['quantity'] = data.get('data').get('json').get('items')[0].get('quantity')
+            qr_raw = data.get('request').get('qrraw')
         except Exception as err:
             log.error(err)
-        try:
-            res['operationType'] = data.get('data').get('json').get('operationType')
-        except Exception as err:
-            log.error(err)
-        try:
-            res['qr_raw'] = data.get('request').get('qrraw')
-        except Exception as err:
-            log.error(err)
-        return res
+        for product in items:
+            try:
+                res['name'] = product.get('name').lower()
+            except Exception as err:
+                log.error(err)
+            try:
+                res['quantity'] = int(product.get('quantity'))
+            except Exception as err:
+                log.error(err)
+            try:
+                res['price'] = float(product.get('price'))
+            except Exception as err:
+                log.error(err)
+            product_list.append(res)
+        return qr_raw, operation_type, product_list
 
     @sync_to_async
     def send_raw_data(self, qr_code):
@@ -62,13 +73,13 @@ class ProverkachekaInterface:
         files = {'qrfile': binary_photo}
         response = requests.post(url, data=data, files=files)
         response = response.json()
-        res = self.__get_filtered_data(response)
+        qr_raw, operation_type, product_list = self.__get_filtered_data(response)
         try:
             code = response.get('code')
-            return res, code
+            return qr_raw, operation_type, product_list, code
         except Exception as err:
             log.error(err)
-            return res, 0
+            return qr_raw, operation_type, product_list, 0
 
 #
 # test = ProverkachekaInterface()
