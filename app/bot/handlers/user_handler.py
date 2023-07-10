@@ -19,6 +19,7 @@ from pyzbar import pyzbar
 from django.db import connection
 import pandas as pd
 
+from applications.users.models import UserRole
 from bot.keyboards.keyboards import KeyboardManager
 from interface.backend import BackendInterface
 from interface.proverkacheka import ProverkachekaInterface
@@ -53,21 +54,30 @@ class BotHandler:
 
     def register_user_handlers(self):
         # Логика проверки кода в таблице
-        self.dp.register_message_handler(self.start, commands=['start'], state='*')
-        self.dp.register_message_handler(self.admin, commands=['admin'], state='*')
-        self.dp.register_message_handler(self.enter_code, state=FSM.enter_code)
+        self.dp.register_message_handler(self.start, commands=['start'], state='*',
+                                         role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_message_handler(self.admin, commands=['admin'], state='*', role=UserRole.ADMIN)
+        self.dp.register_message_handler(self.enter_code, state=FSM.enter_code, role=[UserRole.USER, UserRole.ADMIN])
 
-        self.dp.register_message_handler(self.admin_menu, state=FSM.admin_menu, content_types=types.ContentTypes.ANY)
-        self.dp.register_message_handler(self.send_check, state=FSM.send_check, content_types=types.ContentTypes.PHOTO)
+        self.dp.register_message_handler(self.admin_menu, state=FSM.admin_menu, content_types=types.ContentTypes.ANY,
+                                         role=UserRole.ADMIN)
+        self.dp.register_message_handler(self.send_check, state=FSM.send_check, content_types=types.ContentTypes.PHOTO,
+                                         role=[UserRole.USER, UserRole.ADMIN])
 
-        self.dp.register_callback_query_handler(self.download_check, Text('download_check'), state='*')
-        self.dp.register_callback_query_handler(self.personal_area, Text('personal_area'), state='*')
-        self.dp.register_callback_query_handler(self.check_statistic, Text('check_statistic'), state='*')
-        self.dp.register_callback_query_handler(self.check_treatment, Text('check_treatment'), state='*')
-        self.dp.register_callback_query_handler(self.get_back, Text('get_back'), state='*')
-        self.dp.register_callback_query_handler(self.accrue, Text('accrue'), state='*')
-        self.dp.register_callback_query_handler(self.reject, Text('reject'), state='*')
-        self.dp.register_callback_query_handler(self.get_back_admin, Text('get_back_admin'), state='*')
+        self.dp.register_callback_query_handler(self.download_check, Text('download_check'), state='*',
+                                                role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_callback_query_handler(self.personal_area, Text('personal_area'), state='*',
+                                                role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_callback_query_handler(self.check_statistic, Text('check_statistic'), state='*',
+                                                role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.check_treatment, Text('check_treatment'), state='*',
+                                                role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.get_back, Text('get_back'), state='*',
+                                                role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_callback_query_handler(self.accrue, Text('accrue'), state='*', role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.reject, Text('reject'), state='*', role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.get_back_admin, Text('get_back_admin'), state='*',
+                                                role=UserRole.ADMIN)
 
     @staticmethod
     async def edit_page(message: Message,
@@ -359,7 +369,7 @@ class BotHandler:
 
     async def give_bonus(self, message: types.Message, state: FSMContext, cb: CallbackQuery, check):
         await state.finish()
-        check = check.replace(' ', '').split(',')[0]
+        check = cb.message.text.split('\n')[-1].split(' ')[-1]
         await self.bot.send_message(chat_id=message.chat.id, text=f'даем бонус {check}, {message.text}')
         try:
             await self.bi.write_bonus_accepted_qr(qr_row=check, bonus=int(message.text))

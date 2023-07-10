@@ -1,3 +1,5 @@
+from enum import Enum
+
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -95,3 +97,8 @@ class CodeWord(models.Model):
         existing_word = CodeWord.objects.filter(word__iexact=self.word).exclude(pk=self.pk).first()
         if existing_word:
             raise ValidationError('Такое слово уже существует.')
+
+
+class UserRole(Enum):
+    ADMIN = "admin"
+    USER = "user"
