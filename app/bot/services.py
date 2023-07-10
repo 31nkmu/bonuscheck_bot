@@ -1,4 +1,4 @@
-from aiogram import executor, Dispatcher
+from aiogram import executor, Dispatcher, types
 
 from bot.handlers.user_handler import BotHandler
 from bot.keyboards.keyboards import KeyboardManager
@@ -30,6 +30,9 @@ class BotService:
     def start(self):
         """Запуск бот сервиса. Регистрирует обработчики и запускает поллинг."""
         user_handler = BotHandler(self.dp, self.log, self.bi, self.kb, self.pchi)
+
+        start_command = types.BotCommand(command="start", description="Start the bot")
+        self.dp.bot.set_my_commands([start_command])
 
         # Работа с ролями тут. Этот фильтр ставит роли!!!
         # self.dp.middleware.setup(RoleMiddleware())

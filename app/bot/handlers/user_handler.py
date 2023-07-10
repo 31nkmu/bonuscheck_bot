@@ -147,6 +147,7 @@ class BotHandler:
             photo = message.photo[-1]
             photo_binary = await photo.download(io.BytesIO())
             qr_data, code = await self.pchi.get_qr_by_photo(photo_binary)
+            kb = await self.kb.get_back()
             if code == 1:
                 name = qr_data['name']
                 quantity = qr_data['quantity']
@@ -158,19 +159,20 @@ class BotHandler:
                 if is_have_qr is True:
                     have_qr_text = 'qr code уже был использован\nПопробуйте еще раз'
                     await FSM.send_check.set()
-                    await self.bot.send_message(chat_id=message.chat.id, text=have_qr_text)
+                    await self.bot.send_message(chat_id=message.chat.id, text=have_qr_text, reply_markup=kb)
                     return
                 if operation_type != 1 or is_have_codeword is False:
                     await self.bi.write_bad_qr_to_db(qr_raw=qr_raw, chat_id=message.from_user.id)
                     find_not_qr_text = 'В qr code не найдены нужные ключевые слова\nПопробуйте еще раз'
                     await FSM.send_check.set()
-                    await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text)
+                    await self.bot.send_message(chat_id=message.chat.id, text=find_not_qr_text, reply_markup=kb)
                 else:
                     message_to_delete_bonus = (await message.answer('⌛Начисляем бонусы. . .'))['message_id']
                     is_gave_bonus = await self.bi.give_bonus_write_qr(qr_raw=qr_raw, chat_id=message.from_user.id)
-                    gave_bonus_text = 'Бонусы успешно начислены'
+                    gave_bonus_text = 'Бонусы успешно начислены,\nМожете отправить следующий чек'
                     if is_gave_bonus is True:
-                        await self.bot.send_message(chat_id=message.chat.id, text=gave_bonus_text)
+                        await FSM.send_check.set()
+                        await self.bot.send_message(chat_id=message.chat.id, text=gave_bonus_text, reply_markup=kb)
                     else:
                         find_not_qr_text = 'Что-то пошло не так\nПопробуйте еще раз'
                         await FSM.send_check.set()
@@ -206,8 +208,8 @@ class BotHandler:
         processed_count = await self.bi.get_processed_count(user_obj)
         accepted_count = await self.bi.get_accepted_count(user_obj)
         reject_count = await self.bi.get_reject_count(user_obj)
-        personal_data_text = f'баланс {user_obj.bonus_balance}\n' \
-                             f'код {user_obj.code.title}\n' \
+        personal_data_text = f'Баланс {user_obj.bonus_balance}\n' \
+                             f'Код {user_obj.code.keycode}\n' \
                              f'Обработанные  {processed_count}\n' \
                              f'Принятые {accepted_count}\n' \
                              f'Отклоненные {reject_count}'

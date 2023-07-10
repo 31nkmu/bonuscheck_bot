@@ -12,6 +12,7 @@ class Users(models.Model):
     registered_at = models.DateTimeField(auto_now=True)
     tg_id = models.CharField(unique=True, max_length=120)
     bonus_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    is_admin = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "User"
@@ -50,6 +51,20 @@ class Check(models.Model):
 
     def __str__(self):
         return self.qr_data
+
+
+class Product(models.Model):
+    """
+    Продукты этих чеков
+    """
+    check_field = models.ForeignKey(Check, on_delete=models.CASCADE, related_name='products')
+
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    name = models.TextField()
+    quantity = models.PositiveIntegerField()
+
+    def __str__(self):
+        return self.name
 
 
 class Output(models.Model):
