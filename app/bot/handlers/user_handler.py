@@ -27,10 +27,11 @@ class FSM(StatesGroup):
     admin_menu = State()
     give_bonus = State()
     take_withdraw = State()
+    accept_output = State()
 
 
 class BotHandler:
-    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi", "check_iter", "accrue_handler"
+    __slots__ = "dp", "bot", "log", "bi", "kb", "pchi", "check_iter", "accrue_handler", "app_iter"
 
     def __init__(self,
                  dp: Dispatcher,
@@ -39,7 +40,8 @@ class BotHandler:
                  kb: KeyboardManager,
                  pchi: ProverkachekaInterface,
                  check_iter=None,
-                 accrue_handler=None):
+                 accrue_handler=None,
+                 app_iter=None):
         self.dp = dp
         self.bot = dp.bot
         self.log = log
@@ -48,6 +50,7 @@ class BotHandler:
         self.pchi = pchi
         self.check_iter = check_iter
         self.accrue_handler = accrue_handler
+        self.app_iter = app_iter
 
     def register_user_handlers(self):
         # Логика проверки кода в таблице
@@ -79,6 +82,12 @@ class BotHandler:
                                                 role=UserRole.ADMIN)
         self.dp.register_callback_query_handler(self.withdraw_funds, Text('withdraw_funds'), state='*',
                                                 role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_callback_query_handler(self.admin_withdraw_funds, Text('admin_withdraw_funds'), state='*',
+                                                role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.accrue_output, Text('accrue_output'), state='*',
+                                                role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.reject_output, Text('reject_output'), state='*',
+                                                role=UserRole.ADMIN)
 
     @staticmethod
     async def edit_page(message: Message,
@@ -393,7 +402,8 @@ class BotHandler:
         await state.finish()
         kb = await self.kb.get_back()
         await FSM.take_withdraw.set()
-        await self.bot.send_message(cb.message.chat.id, text='Введите количество бонусов, которые хотите вывести', reply_markup=kb)
+        await self.bot.send_message(cb.message.chat.id, text='Введите количество бонусов, которые хотите вывести',
+                                    reply_markup=kb)
 
     async def take_withdraw(self, message: types.Message, state: FSMContext):
         """
@@ -427,3 +437,55 @@ class BotHandler:
         admin_list = self.bi.get_all_admin_tg_id()
         for tg_id in admin_list:
             async_to_sync(self.bot.send_message)(tg_id, msg)
+
+    async def admin_withdraw_funds(self, cb: CallbackQuery, state: FSMContext):
+        """
+        Обработка заявок на вывод
+        """
+        await state.finish()
+        processing_app_list = await self.bi.get_all_processing_app()
+        self.app_iter = iter(processing_app_list)
+        await self.process_next_fund(cb)
+
+    async def process_next_fund(self, cb: CallbackQuery):
+        """
+        Получение следующей заявки на вывод
+        """
+        try:
+            next_app = next(self.app_iter)
+            kb = await self.kb.get_processing_fund_kb()
+            owner, amount, balance = await self.bi.get_split_data(next_app)
+            await cb.message.answer(f'Пользователь: {owner}\nНа вывод: {amount}\nБаланс: {balance}',
+                                    reply_markup=kb)
+        except StopIteration:
+            kb = await self.kb.get_admin_kb()
+            await self.bot.send_message(chat_id=cb.message.chat.id, text='Все заявки обработаны', reply_markup=kb)
+
+    async def accrue_output(self, cb: CallbackQuery, state: FSMContext):
+        """
+        Отвечает за вывод по запросу пользователя
+        """
+        await state.finish()
+        accepted_output = cb.message.text.split('\n')
+        owner = accepted_output[0].replace(' ', '').split(':')[-1]
+        amount = accepted_output[1].replace(' ', '').split(':')[-1]
+        is_accrued_output = await self.bi.accrue_output(owner=owner, amount=amount)
+        if is_accrued_output is True:
+            accrued_text = 'Вывод был успешно принят'
+            await self.bot.send_message(chat_id=cb.message.chat.id, text=accrued_text)
+            await self.bot.send_message(chat_id=owner, text=f'Ваш вывод на сумму {amount} был успешно принят')
+            await self.process_next_fund(cb)
+        else:
+            error_text = 'Что-то пошло не так'
+            await self.bot.send_message(chat_id=cb.message.chat.id, text=error_text)
+
+    async def reject_output(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        accepted_output = cb.message.text.split('\n')
+        owner = accepted_output[0].replace(' ', '').split(':')[-1]
+        amount = accepted_output[1].replace(' ', '').split(':')[-1]
+        await self.bi.reject_output(owner=owner, amount=amount)
+        await self.bot.send_message(chat_id=cb.message.chat.id,
+                                    text=f'Возврат пользователя {owner} на сумму {amount} был отклонен')
+        await self.bot.send_message(chat_id=owner, text=f'Ваш вывод на сумму {amount} был отклонен')
+        await self.process_next_fund(cb)

@@ -28,6 +28,7 @@ class KeyboardManager:
         kb = types.InlineKeyboardMarkup()
         kb.add(types.InlineKeyboardButton(text='Статистика чеков', callback_data='check_statistic'))
         kb.add(types.InlineKeyboardButton(text='Обработка чеков', callback_data='check_treatment'))
+        kb.add(types.InlineKeyboardButton(text='Обработка выводов', callback_data='admin_withdraw_funds'))
         kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
         return kb
 
@@ -39,8 +40,16 @@ class KeyboardManager:
         kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back_admin'))
         return kb
 
-    # @staticmethod
-    # async def get_withdraw_funds_kb() -> types.InlineKeyboardMarkup:
-    #     kb = types.InlineKeyboardMarkup()
-    #     kb.add(types.InlineKeyboardButton(test='Вывод средств', callback_data='withdraw_funds'))
-    #     return kb
+    @staticmethod
+    async def get_admin_withdraw_funds_kb() -> types.InlineKeyboardMarkup:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton(text='Вывод средств', callback_data='admin_withdraw_funds'))
+        return kb
+
+    @staticmethod
+    async def get_processing_fund_kb() -> types.InlineKeyboardMarkup:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton(text='Начислить', callback_data='accrue_output'))
+        kb.add(types.InlineKeyboardButton(text='Отклонить', callback_data='reject_output'))
+        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back_admin'))
+        return kb

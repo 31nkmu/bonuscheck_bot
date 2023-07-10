@@ -1,3 +1,5 @@
+import decimal
+
 from asgiref.sync import sync_to_async
 from django.db import transaction
 
@@ -220,6 +222,57 @@ class OutputInterfaceMixin:
         try:
             Output.objects.create(owner=user_obj, amount=balance)
             return True
+        except Exception as err:
+            log.error(err)
+            return False
+
+    @sync_to_async
+    def get_all_processing_app(self):
+        """
+        Получает все заявки на вывод, находящиеся в обработке
+        """
+        try:
+            res = Output.objects.filter(status='processing').all()
+            return list(res)
+        except Exception as err:
+            log.error(err)
+            return []
+
+    @sync_to_async
+    def get_split_data(self, output_obj):
+        try:
+            owner = output_obj.owner.tg_id
+            amount = output_obj.amount
+            balance = output_obj.owner.bonus_balance
+            return owner, amount, balance
+        except Exception as err:
+            log.error(err)
+            return None, None, None
+
+    @sync_to_async
+    def accrue_output(self, owner, amount):
+        try:
+            with transaction.atomic():
+                user_obj = Users.objects.get(tg_id=owner)
+                user_obj.bonus_balance -= decimal.Decimal(float(amount))
+                output_obj = user_obj.outputs.filter(amount=amount, status='processing').first()
+                output_obj.status = 'accepted'
+                output_obj.save()
+                user_obj.save()
+                return True
+        except Exception as err:
+            log.error(err)
+            return False
+
+    @sync_to_async
+    def reject_output(self, owner, amount):
+        try:
+            with transaction.atomic():
+                user_obj = Users.objects.get(tg_id=owner)
+                output_obj = user_obj.outputs.filter(amount=amount, status='processing').first()
+                output_obj.status = 'rejected'
+                output_obj.save()
+                return True
         except Exception as err:
             log.error(err)
             return False
