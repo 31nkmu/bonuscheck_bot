@@ -180,7 +180,12 @@ class BotHandler:
                     await FSM.send_check.set()
                     await self.bot.send_message(chat_id=message.chat.id, text=have_qr_text, reply_markup=kb)
                     return
-                if operation_type != 1 or len(have_codeword_products) == 0:
+                if operation_type != 1:
+                    find_not_operation_type = 'Неверный тип чека'
+                    await FSM.send_check.set()
+                    await self.bot.send_message(chat_id=message.chat.id, text=find_not_operation_type, reply_markup=kb)
+                    return
+                if len(have_codeword_products) == 0:
                     await self.bi.write_bad_qr_to_db(qr_raw=qr_raw, chat_id=message.from_user.id,
                                                      product_list=product_list)
                     find_not_qr_text = 'В qr code не найдены нужные ключевые слова\nПопробуйте еще раз'

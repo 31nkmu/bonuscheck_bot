@@ -83,4 +83,4 @@ class ProverkachekaInterface:
 
 #
 # test = ProverkachekaInterface()
-# print(test.send_raw_data('t=20230703T1143&s=650.00&fn=7284440500054890&i=917&fp=28742411&n=1'))
+# print(test.send_raw_data('t=20230629t1821&s=2000.00&fn=7284440500054890&i=882&fp=4112580178&n=1'))

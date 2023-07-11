@@ -8,13 +8,13 @@ class Users(models.Model):
     """
     Пользователи
     """
-    code = models.ForeignKey("Code", on_delete=models.CASCADE, related_name="users")
+    code = models.ForeignKey("Code", on_delete=models.CASCADE, related_name="users", verbose_name='Код')
 
-    is_banned = models.BooleanField(default=False)
-    registered_at = models.DateTimeField(auto_now=True)
-    tg_id = models.CharField(unique=True, max_length=120)
-    bonus_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    is_admin = models.BooleanField(default=False)
+    is_banned = models.BooleanField(default=False, verbose_name='Забанен')
+    registered_at = models.DateTimeField(auto_now=True, verbose_name='Зарегистрироан')
+    tg_id = models.CharField(unique=True, max_length=120, verbose_name='Телеграм id')
+    bonus_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Бонусны')
+    is_admin = models.BooleanField(default=False, verbose_name='Админ')
 
     class Meta:
         verbose_name = "Пользователь"
@@ -95,6 +95,7 @@ class Output(models.Model):
     amount = models.PositiveIntegerField(default=1, verbose_name='Количество')
     is_paid = models.BooleanField(default=False, verbose_name='Оплачено')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='processing', verbose_name='Статус')
+    created_at = models.DateTimeField(auto_now=True, verbose_name='Создан')
 
     def __str__(self):
         return str(self.amount)
