@@ -19,10 +19,12 @@ class RoleMiddleware(LifetimeControllerMiddleware, BackendInterface):
             id = obj.from_user.id
             user_obj = await self.get_user(id)
             if user_obj is False:
-                data["role"] = UserRole.USER
+                data["role"] = UserRole.NOT_ACTIVE
                 return
             if user_obj.is_admin is True:
                 data["role"] = UserRole.ADMIN
+            elif user_obj.code.is_active is False:
+                data["role"] = UserRole.NOT_ACTIVE
             else:
                 data["role"] = UserRole.USER
 

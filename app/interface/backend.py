@@ -54,6 +54,16 @@ class UserInterfaceMixin:
             log.warning(err)
             return False
 
+    @sync_to_async
+    def get_user_with_code(self, tg_id):
+        try:
+            user_obj = self.__get_user(tg_id)
+            is_active = user_obj.code.is_active
+            return is_active
+        except Exception as err:
+            log.warning(err)
+            return False
+
 
 class CodeInterfaceMixin:
     @staticmethod
@@ -64,7 +74,11 @@ class CodeInterfaceMixin:
     @sync_to_async
     def get_code(self, code: str):
         try:
-            return self.__get_code(code)
+            code_obj = self.__get_code(code)
+            is_active_code = code_obj.is_active
+            if code_obj and is_active_code:
+                return code_obj
+            return False
         except Exception as err:
             log.warning(err)
             return False

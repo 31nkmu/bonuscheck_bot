@@ -55,9 +55,10 @@ class BotHandler:
     def register_user_handlers(self):
         # Логика проверки кода в таблице
         self.dp.register_message_handler(self.start, commands=['start'], state='*',
-                                         role=[UserRole.USER, UserRole.ADMIN])
+                                         role=[UserRole.USER, UserRole.ADMIN, UserRole.NOT_ACTIVE])
         self.dp.register_message_handler(self.admin, commands=['admin'], state='*', role=UserRole.ADMIN)
-        self.dp.register_message_handler(self.enter_code, state=FSM.enter_code, role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_message_handler(self.enter_code, state=FSM.enter_code,
+                                         role=[UserRole.USER, UserRole.ADMIN, UserRole.NOT_ACTIVE])
 
         self.dp.register_message_handler(self.admin_menu, state=FSM.admin_menu, content_types=types.ContentTypes.ANY,
                                          role=UserRole.ADMIN)
@@ -105,7 +106,7 @@ class BotHandler:
         text = "👋Здравствуйте!"
         await self.bot.send_photo(chat_id=message.chat.id, caption=text,
                                   photo=types.InputFile('app/bot/media/test2.jpg'))
-        user = await self.bi.get_user(tg_id=message.from_user.id)
+        user = await self.bi.get_user_with_code(tg_id=message.from_user.id)
         if user:
             success_code_kb = await self.kb.get_paid_kb()
             success_code_text = "Код успешно найден!"
