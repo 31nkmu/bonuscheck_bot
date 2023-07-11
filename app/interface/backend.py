@@ -1,9 +1,9 @@
 import decimal
 
 from asgiref.sync import sync_to_async
-from django.db import transaction
+from django.db import transaction, IntegrityError
 
-from applications.users.models import Code, Users, Check, CodeWord, Product, Output
+from applications.users.models import Code, Users, Check, CodeWord, Product, Output, Gtin
 from config.settings import BACKEND_LOGGER as log
 
 
@@ -218,10 +218,15 @@ class CheckInterfaceMixin:
 
 class OutputInterfaceMixin:
     @sync_to_async
-    def create_output(self, user_obj, balance):
+    def create_output(self, tg_id, balance):
         try:
+            user_obj = Users.objects.get(tg_id=tg_id)
+            if user_obj.outputs.filter(status='processing').first():
+                raise IntegrityError
             Output.objects.create(owner=user_obj, amount=balance)
             return True
+        except IntegrityError:
+            return 'have_output'
         except Exception as err:
             log.error(err)
             return False
@@ -277,11 +282,28 @@ class OutputInterfaceMixin:
             log.error(err)
             return False
 
+    @sync_to_async
+    def del_output(self, tg_id):
+        try:
+            user_obj = Users.objects.get(tg_id=tg_id)
+            output_obj = user_obj.outputs.filter(status='processing').first()
+            if output_obj:
+                output_obj.status = 'rejected'
+                output_obj.save()
+                return True
+            return False
+        except Exception as err:
+            log.error(err)
+            return False
+
 
 class CodeWordMixin:
-    def get_codeword_in_text(self, text):
+    def check_text(self, text, gtin):
         try:
             codewords = [codeword.word for codeword in CodeWord.objects.all()]
+            gtins = [i.gtin for i in Gtin.objects.all()]
+            if gtin in gtins:
+                return True
             if any(codeword in text for codeword in codewords):
                 return True
             return False
@@ -292,7 +314,7 @@ class CodeWordMixin:
     @sync_to_async
     def get_have_codeword_products(self, product_list) -> list:
         try:
-            return [i for i in product_list if self.get_codeword_in_text(i['name'])]
+            return [i for i in product_list if self.check_text(i['name'], i['gtin'])]
         except Exception as err:
             log.error(err)
             return []

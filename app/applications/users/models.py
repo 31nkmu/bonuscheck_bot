@@ -106,6 +106,13 @@ class CodeWord(models.Model):
             raise ValidationError('Такое слово уже существует.')
 
 
+class Gtin(models.Model):
+    gtin = models.CharField(max_length=120, unique=True)
+
+    def __str__(self):
+        return self.gtin
+
+
 class UserRole(Enum):
     ADMIN = "admin"
     USER = "user"

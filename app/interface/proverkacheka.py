@@ -31,10 +31,16 @@ class ProverkachekaInterface:
             log.warning(err)
         for product in items:
             try:
+                try:
+                    gtin = product.get('productCodeNew').get('kmk').get('gtin')
+                except Exception as err:
+                    log.warning(err)
+                    gtin = None
                 product_list.append({
                     'name': product.get('name').lower(),
                     'quantity': int(product.get('quantity')),
-                    'price': float(product.get('price'))
+                    'price': float(product.get('price')),
+                    'gtin': gtin,
                 })
             except Exception as err:
                 log.warning(err)

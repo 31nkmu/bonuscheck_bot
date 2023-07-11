@@ -88,6 +88,8 @@ class BotHandler:
                                                 role=UserRole.ADMIN)
         self.dp.register_callback_query_handler(self.reject_output, Text('reject_output'), state='*',
                                                 role=UserRole.ADMIN)
+        self.dp.register_callback_query_handler(self.cancel_output, Text('cancel_output'), state='*',
+                                                role=[UserRole.USER, UserRole.ADMIN])
 
     @staticmethod
     async def edit_page(message: Message,
@@ -418,14 +420,18 @@ class BotHandler:
             await self.bot.send_message(message.chat.id, text=invalid_balance_text, reply_markup=kb)
             return
         user_obj = await self.bi.get_user(message.from_user.id)
-        is_created = await self.bi.create_output(user_obj=user_obj, balance=balance)
+        is_created = await self.bi.create_output(tg_id=user_obj, balance=balance)
         if is_created is True:
             is_created_text = 'Сообщение о выводе бонусных средств было отправлено на обработку'
             text_to_admin = f'Пользователь {user_obj.tg_id} хочет вывести {balance}\n' \
                             f'Его баланс составляет {user_obj.bonus_balance}'
             kb = await self.kb.get_personal_area_kb()
             await self.send_messages_to_admin(text_to_admin)
-            await self.bot.send_message(message.from_user.id, is_created_text, reply_markup=kb)
+            await self.bot.send_message(message.chat.id, is_created_text, reply_markup=kb)
+        elif is_created == 'have_output':
+            is_have_output_text = 'Вы уже подали заявку на вывод'
+            kb = await self.kb.get_personal_area_kb()
+            await self.bot.send_message(message.chat.id, is_have_output_text, reply_markup=kb)
         else:
             not_created_text = 'Что-то пошло не так, введите баланс заново'
             kb = await self.kb.get_back()
@@ -489,3 +495,14 @@ class BotHandler:
                                     text=f'Возврат пользователя {owner} на сумму {amount} был отклонен')
         await self.bot.send_message(chat_id=owner, text=f'Ваш вывод на сумму {amount} был отклонен')
         await self.process_next_fund(cb)
+
+    async def cancel_output(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        is_deleted = await self.bi.del_output(tg_id=cb.from_user.id)
+        kb = await self.kb.get_personal_area_kb()
+        if is_deleted is True:
+            deleted_output_text = 'Ваш вывод был отменен'
+            await self.bot.send_message(cb.message.chat.id, deleted_output_text, reply_markup=kb)
+            return
+        have_not_output_text = 'У вас нет заявок на вывод'
+        await self.bot.send_message(cb.message.chat.id, have_not_output_text, reply_markup=kb)

@@ -14,6 +14,7 @@ class KeyboardManager:
     async def get_personal_area_kb() -> types.InlineKeyboardMarkup:
         kb = types.InlineKeyboardMarkup()
         kb.add(types.InlineKeyboardButton(text='Вывод средств', callback_data='withdraw_funds'))
+        kb.add(types.InlineKeyboardButton(text='Отменить вывод', callback_data='cancel_output'))
         kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back'))
         return kb
 
