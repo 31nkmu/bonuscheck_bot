@@ -21,7 +21,9 @@ class RoleMiddleware(LifetimeControllerMiddleware, BackendInterface):
             if user_obj is False:
                 data["role"] = UserRole.NOT_ACTIVE
                 return
-            if user_obj.is_admin is True:
+            if user_obj.is_banned is True:
+                data["role"] = UserRole.BAN
+            elif user_obj.is_admin is True:
                 data["role"] = UserRole.ADMIN
             elif user_obj.code.is_active is False:
                 data["role"] = UserRole.NOT_ACTIVE

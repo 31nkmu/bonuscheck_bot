@@ -140,3 +140,4 @@ class UserRole(Enum):
     ADMIN = "admin"
     USER = "user"
     NOT_ACTIVE = "not_active"
+    BAN = "ban"
