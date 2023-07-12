@@ -3,7 +3,7 @@ import decimal
 from asgiref.sync import sync_to_async
 from django.db import transaction, IntegrityError
 
-from applications.users.models import Code, Users, Check, CodeWord, Product, Output, Gtin
+from applications.users.models import Code, Users, Check, CodeWord, Product, Output, Gtin, Bonus, MinBalance
 from config.settings import BACKEND_LOGGER as log
 
 
@@ -37,6 +37,11 @@ class UserInterfaceMixin:
     @sync_to_async
     def create_user(code: Code, tg_id):
         try:
+            user_obj = Users.objects.filter(tg_id=tg_id).first()
+            if user_obj:
+                user_obj.code = code
+                user_obj.save()
+                return True
             Users.objects.create(
                 code=code,
                 tg_id=tg_id
@@ -45,6 +50,15 @@ class UserInterfaceMixin:
         except Exception as err:
             log.warning(err)
             return False
+
+    @sync_to_async
+    def check_code_user(self, user_obj):
+        try:
+            if user_obj.code is None:
+                return False
+            return user_obj.code.is_active
+        except Exception as err:
+            log.warning(err)
 
     @sync_to_async
     def get_user(self, tg_id):
@@ -83,6 +97,14 @@ class CodeInterfaceMixin:
             log.warning(err)
             return False
 
+    @sync_to_async
+    def get_keycode(self, user_obj):
+        try:
+            return user_obj.code.keycode
+        except Exception as err:
+            log.error(err)
+            return False
+
 
 class CheckInterfaceMixin:
     @sync_to_async
@@ -107,15 +129,22 @@ class CheckInterfaceMixin:
                 check_obj = Check.objects.create(owner=owner, qr_data=qr_raw, is_processed=True, bonus_balance=100,
                                                  is_accepted=False)
                 product_obj_list = []
+                res_quantity = 0
                 for product in product_list:
                     product_obj_list.append(
                         Product(check_field=check_obj, price=product['price'], name=product['name'],
                                 quantity=product['quantity'])
                     )
+                    res_quantity += product['quantity']
 
                 # TODO: узнать сколько баланса начислить
-                owner.bonus_balance += 100
+                bonus = Bonus.objects.all().first()
+                if not bonus:
+                    bonus = Bonus.objects.create()
+                owner.bonus_balance += bonus.balance * res_quantity
+                check_obj.bonus_balance = bonus.balance * res_quantity
                 owner.save()
+                check_obj.save()
                 Product.objects.bulk_create(product_obj_list)
                 return True
         except Exception as err:
@@ -334,6 +363,20 @@ class CodeWordMixin:
             return []
 
 
+class BalanceMixin:
+    @sync_to_async
+    def get_min_balance_to_output(self):
+        try:
+            min_balance = MinBalance.objects.all().first()
+            if min_balance:
+                return min_balance.balance
+            min_balance = MinBalance.objects.create()
+            return min_balance.balance
+        except Exception as err:
+            log.error(err)
+            return 500
+
+
 class BackendInterface(UserInterfaceMixin, CodeInterfaceMixin, CheckInterfaceMixin, OutputInterfaceMixin,
-                       CodeWordMixin, ProductInterfaceMixin):
+                       CodeWordMixin, ProductInterfaceMixin, BalanceMixin):
     pass

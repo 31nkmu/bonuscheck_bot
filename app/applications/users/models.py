@@ -8,7 +8,7 @@ class Users(models.Model):
     """
     Пользователи
     """
-    code = models.ForeignKey("Code", on_delete=models.CASCADE, related_name="users", verbose_name='Код')
+    code = models.ForeignKey("Code", on_delete=models.SET_NULL, related_name="users", verbose_name='Код', null=True)
 
     is_banned = models.BooleanField(default=False, verbose_name='Забанен')
     registered_at = models.DateTimeField(auto_now=True, verbose_name='Зарегистрироан')
@@ -135,6 +135,31 @@ class Gtin(models.Model):
     class Meta:
         verbose_name = "Gtin"
         verbose_name_plural = "Gtin"
+
+
+class Bonus(models.Model):
+    """
+    Сколько бонусов начислять за 1 продукт
+    """
+    balance = models.DecimalField(default=100, decimal_places=2, max_digits=10)
+
+    def __str__(self):
+        return str(self.balance)
+
+    class Meta:
+        verbose_name = 'Начислять бонусов'
+        verbose_name_plural = 'Начислять бонусов'
+
+
+class MinBalance(models.Model):
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=500)
+
+    class Meta:
+        verbose_name = 'Минимальный вывод'
+        verbose_name_plural = 'Минимальный вывод'
+
+    def __str__(self):
+        return str(self.balance)
 
 
 class UserRole(Enum):

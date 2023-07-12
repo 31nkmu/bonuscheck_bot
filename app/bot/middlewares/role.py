@@ -11,8 +11,6 @@ class RoleMiddleware(LifetimeControllerMiddleware, BackendInterface):
         super().__init__()
 
     async def pre_process(self, obj, data, *args):
-        # TODO проверять пользователя на наличие в черном списке
-
         if not getattr(obj, "from_user", None):
             data["role"] = None
         else:
@@ -25,7 +23,7 @@ class RoleMiddleware(LifetimeControllerMiddleware, BackendInterface):
                 data["role"] = UserRole.BAN
             elif user_obj.is_admin is True:
                 data["role"] = UserRole.ADMIN
-            elif user_obj.code.is_active is False:
+            elif await self.check_code_user(user_obj) is False:
                 data["role"] = UserRole.NOT_ACTIVE
             else:
                 data["role"] = UserRole.USER

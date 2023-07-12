@@ -1,9 +1,11 @@
 from django.contrib import admin
 
-from applications.users.models import Users, Code, Check, Output, CodeWord, Product, Gtin
+from applications.users.models import Users, Code, Check, Output, CodeWord, Product, Gtin, Bonus, MinBalance
 
 admin.site.register(CodeWord)
 admin.site.register(Gtin)
+admin.site.register(Bonus)
+admin.site.register(MinBalance)
 
 
 def set_field_to_false(modeladmin, request, queryset):

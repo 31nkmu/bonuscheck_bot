@@ -236,8 +236,9 @@ class BotHandler:
         processed_count = await self.bi.get_processed_count(user_obj)
         accepted_count = await self.bi.get_accepted_count(user_obj)
         reject_count = await self.bi.get_reject_count(user_obj)
+        code = await self.bi.get_keycode(user_obj)
         personal_data_text = f'Баланс {user_obj.bonus_balance}\n' \
-                             f'Код {user_obj.code.keycode}\n' \
+                             f'Код {code}\n' \
                              f'Обработанные  {processed_count}\n' \
                              f'Принятые {accepted_count}\n' \
                              f'Отклоненные {reject_count}'
@@ -419,6 +420,13 @@ class BotHandler:
         """
         balance = float(message.text)
         user_obj = await self.bi.get_user(message.from_user.id)
+        min_balance_to_output = await self.bi.get_min_balance_to_output()
+        if balance < min_balance_to_output:
+            kb = await self.kb.get_back()
+            invalid_balance_text = f'Вы не можете вывести меньше {min_balance_to_output}. Попробуйте снова'
+            await FSM.take_withdraw.set()
+            await self.bot.send_message(message.chat.id, text=invalid_balance_text, reply_markup=kb)
+            return
         if balance > user_obj.bonus_balance:
             kb = await self.kb.get_back()
             invalid_balance_text = f'Вы не можете вывести больше {user_obj.bonus_balance}. Попробуйте снова'
