@@ -28,6 +28,7 @@ class FSM(StatesGroup):
     give_bonus = State()
     take_withdraw = State()
     accept_output = State()
+    save_output = State()
 
 
 class BotHandler:
@@ -66,6 +67,8 @@ class BotHandler:
                                          role=[UserRole.USER, UserRole.ADMIN])
         self.dp.register_message_handler(self.take_withdraw, state=FSM.take_withdraw,
                                          content_types=types.ContentTypes.ANY, role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_message_handler(self.save_output, state=FSM.save_output, content_types=types.ContentTypes.TEXT,
+                                         role=[UserRole.USER, UserRole.ADMIN])
 
         self.dp.register_callback_query_handler(self.download_check, Text('download_check'), state='*',
                                                 role=[UserRole.USER, UserRole.ADMIN])
@@ -128,7 +131,7 @@ class BotHandler:
             code = await self.bi.get_code(message.text)
             if code:
                 await state.finish()
-                await self.bi.create_user(code=code, tg_id=message.from_user.id)
+                await self.bi.create_user(code=code, tg_id=message.from_user.id, username=message.from_user.username)
                 success_code_kb = await self.kb.get_paid_kb()
                 success_code_text = "Код успешно найден! \n Вы были зарегистрированы"
                 await self.bot.send_photo(chat_id=message.chat.id,
@@ -436,23 +439,32 @@ class BotHandler:
             await self.bot.send_message(message.chat.id, text=invalid_balance_text, reply_markup=kb)
             return
         user_obj = await self.bi.get_user(message.from_user.id)
-        is_created = await self.bi.create_output(tg_id=user_obj, balance=balance)
-        if is_created is True:
-            is_created_text = 'Сообщение о выводе бонусных средств было отправлено на обработку'
-            text_to_admin = f'Пользователь {user_obj.tg_id} хочет вывести {balance}\n' \
-                            f'Его баланс составляет {user_obj.bonus_balance}'
-            kb = await self.kb.get_personal_area_kb()
-            await self.send_messages_to_admin(text_to_admin)
-            await self.bot.send_message(message.chat.id, is_created_text, reply_markup=kb)
-        elif is_created == 'have_output':
+        is_have_output = await self.bi.is_have_output(user_obj)
+        if is_have_output is True:
             is_have_output_text = 'Вы уже подали заявку на вывод'
             kb = await self.kb.get_personal_area_kb()
             await self.bot.send_message(message.chat.id, is_have_output_text, reply_markup=kb)
-        else:
-            not_created_text = 'Что-то пошло не так, введите баланс заново'
-            kb = await self.kb.get_back()
-            await FSM.take_withdraw.set()
-            await self.bot.send_message(message.from_user.id, not_created_text, reply_markup=kb)
+            return
+        send_data_text = 'Введите данные для получения бонусов\nНомер телефона или карты'
+        kb = await self.kb.get_back()
+        await state.update_data(balance=balance)
+        await FSM.save_output.set()
+        await self.bot.send_message(message.chat.id, send_data_text, reply_markup=kb)
+        return
+        # TODO: Внедрить в стейт
+        # is_created = await self.bi.create_output(tg_id=user_obj, balance=balance)
+        # if is_created is True:
+        #     is_created_text = 'Сообщение о выводе бонусных средств было отправлено на обработку'
+        #     text_to_admin = f'Пользователь {user_obj.tg_id} хочет вывести {balance}\n' \
+        #                     f'Его баланс составляет {user_obj.bonus_balance}'
+        #     kb = await self.kb.get_personal_area_kb()
+        #     await self.send_messages_to_admin(text_to_admin)
+        #     await self.bot.send_message(message.chat.id, is_created_text, reply_markup=kb)
+        # else:
+        #     not_created_text = 'Что-то пошло не так, введите баланс заново'
+        #     kb = await self.kb.get_back()
+        #     await FSM.take_withdraw.set()
+        #     await self.bot.send_message(message.from_user.id, not_created_text, reply_markup=kb)
 
     @sync_to_async
     def send_messages_to_admin(self, msg):
@@ -476,8 +488,10 @@ class BotHandler:
         try:
             next_app = next(self.app_iter)
             kb = await self.kb.get_processing_fund_kb()
-            owner, amount, balance = await self.bi.get_split_data(next_app)
-            await cb.message.answer(f'Пользователь: {owner}\nНа вывод: {amount}\nБаланс: {balance}',
+            owner, amount, balance, username, send_data = await self.bi.get_split_data(next_app)
+            await cb.message.answer(f'Пользователь: {owner}\nНа вывод: {amount}\nБаланс: {balance}'
+                                    f'\n\nUsername: {username if username else "нет"}'
+                                    f'\nДанные для отправки: {send_data}',
                                     reply_markup=kb)
         except StopIteration:
             kb = await self.kb.get_admin_kb()
@@ -522,3 +536,23 @@ class BotHandler:
             return
         have_not_output_text = 'У вас нет заявок на вывод'
         await self.bot.send_message(cb.message.chat.id, have_not_output_text, reply_markup=kb)
+
+    async def save_output(self, message, state: FSMContext):
+        user_obj = await self.bi.get_user(message.from_user.id)
+        bonus = await state.get_data()
+        await state.finish()
+        balance = bonus['balance']
+        send_data = message.text
+        is_created = await self.bi.create_output(user_obj=user_obj, balance=balance, send_data=send_data)
+        if is_created is True:
+            is_created_text = 'Сообщение о выводе бонусных средств было отправлено на обработку'
+            text_to_admin = f'Пользователь {user_obj.tg_id} хочет вывести {balance}\n' \
+                            f'Его баланс составляет {user_obj.bonus_balance}'
+            kb = await self.kb.get_personal_area_kb()
+            await self.send_messages_to_admin(text_to_admin)
+            await self.bot.send_message(message.chat.id, is_created_text, reply_markup=kb)
+        else:
+            not_created_text = 'Что-то пошло не так, введите баланс заново'
+            kb = await self.kb.get_back()
+            await FSM.take_withdraw.set()
+            await self.bot.send_message(message.from_user.id, not_created_text, reply_markup=kb)

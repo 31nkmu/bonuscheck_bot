@@ -19,7 +19,7 @@ class UserInterfaceMixin:
 
     @staticmethod
     @sync_to_async
-    def create_user(code: Code, tg_id):
+    def create_user(code: Code, tg_id, username):
         try:
             user_obj = Users.objects.filter(tg_id=tg_id).first()
             if user_obj:
@@ -28,7 +28,8 @@ class UserInterfaceMixin:
                 return True
             Users.objects.create(
                 code=code,
-                tg_id=tg_id
+                tg_id=tg_id,
+                username=username
             )
             return True
         except Exception as err:

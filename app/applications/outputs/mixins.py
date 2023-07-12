@@ -10,17 +10,27 @@ from config.settings import BACKEND_LOGGER as log
 
 class OutputInterfaceMixin:
     @sync_to_async
-    def create_output(self, tg_id, balance):
+    def create_output(self, user_obj, balance, send_data):
+        try:
+            # if user_obj.outputs.filter(status='processing').first():
+            #     raise IntegrityError
+            Output.objects.create(owner=user_obj, amount=balance, send_data=send_data)
+            return True
+        # except IntegrityError:
+        #     return 'have_output'
+        except Exception as err:
+            log.error(err)
+            return False
+
+    @sync_to_async
+    def is_have_output(self, tg_id):
         try:
             user_obj = Users.objects.get(tg_id=tg_id)
             if user_obj.outputs.filter(status='processing').first():
-                raise IntegrityError
-            Output.objects.create(owner=user_obj, amount=balance)
-            return True
-        except IntegrityError:
-            return 'have_output'
+                return True
+            return False
         except Exception as err:
-            log.error(err)
+            log.warning(err)
             return False
 
     @sync_to_async
@@ -41,7 +51,9 @@ class OutputInterfaceMixin:
             owner = output_obj.owner.tg_id
             amount = output_obj.amount
             balance = output_obj.owner.bonus_balance
-            return owner, amount, balance
+            username = output_obj.owner.username
+            send_data = output_obj.send_data
+            return owner, amount, balance, username, send_data
         except Exception as err:
             log.error(err)
             return None, None, None

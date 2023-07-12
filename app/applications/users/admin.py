@@ -28,7 +28,7 @@ unban_users.short_description = "Разбанить пользователей"
 
 @admin.register(Users)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("tg_id", "bonus_balance", "code", "checks", "registered_at")
+    list_display = ("username", "tg_id", "bonus_balance", "code", "checks", "registered_at")
     list_filter = ("code", "is_admin")
     actions = [ban_users, unban_users]
 

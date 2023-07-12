@@ -14,6 +14,7 @@ class Users(models.Model):
     tg_id = models.CharField(unique=True, max_length=120, verbose_name='Телеграм id')
     bonus_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Бонусны')
     is_admin = models.BooleanField(default=False, verbose_name='Админ')
+    username = models.CharField(max_length=120)
 
     class Meta:
         verbose_name = "Пользователь"

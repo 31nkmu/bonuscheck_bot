@@ -19,6 +19,8 @@ class Output(models.Model):
     is_paid = models.BooleanField(default=False, verbose_name='Оплачено')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='processing', verbose_name='Статус')
     created_at = models.DateTimeField(auto_now=True, verbose_name='Создан')
+    # Данные для отправки сбп
+    send_data = models.CharField(max_length=200, verbose_name='Куда отправлять')
 
     def __str__(self):
         return str(self.amount)
