@@ -1,11 +1,6 @@
 from django.contrib import admin
 
-from applications.users.models import Users, Code, Check, Output, CodeWord, Product, Gtin, Bonus, MinBalance
-
-admin.site.register(CodeWord)
-admin.site.register(Gtin)
-admin.site.register(Bonus)
-admin.site.register(MinBalance)
+from applications.users.models import Users, Code
 
 
 def set_field_to_false(modeladmin, request, queryset):
@@ -41,34 +36,6 @@ class UserAdmin(admin.ModelAdmin):
         return len(obj.checks.all())
 
     checks.short_description = 'Чеки'
-
-
-@admin.register(Check)
-class CheckAdmin(admin.ModelAdmin):
-    list_display = ("qr_data", "owner", "products", "product_count")
-    list_filter = ("owner",)
-
-    def products(self, obj):
-        return ' | '.join([i.name for i in obj.products.all()])
-
-    products.short_description = 'Продукты'
-
-    def product_count(self, obj):
-        return len(obj.products.all())
-
-    product_count.short_description = 'Количество продуктов'
-
-
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    list_display = ("price", "name", "quantity", "check_field")
-    list_filter = ("check_field",)
-
-
-@admin.register(Output)
-class OutputAdmin(admin.ModelAdmin):
-    list_display = ("owner", "amount", "status", "created_at")
-    list_filter = ("status", "owner")
 
 
 @admin.register(Code)

@@ -3,12 +3,11 @@ from typing import Tuple
 import requests
 from asgiref.sync import sync_to_async
 
-from config.settings import CHECK_TOKEN, CHECK_LOGGER as log
+from applications.tokens.models import Token
+from config.settings import CHECK_LOGGER as log
 
 
 class ProverkachekaInterface:
-    token = CHECK_TOKEN
-
     def __get_filtered_data(self, data) -> Tuple[str, int, list]:
         """
         Получает из данных только name, quantity и operationType
@@ -54,9 +53,10 @@ class ProverkachekaInterface:
         :return:
         """
         url = f"https://proverkacheka.com/api/v1/check/get"
+        token = Token.objects.all().order_by('-created_at')[0]
         data = {
             'qrraw': qr_code,
-            'token': self.token
+            'token': token
         }
         log.info('Отправка запроса в API')
         try:
@@ -69,7 +69,8 @@ class ProverkachekaInterface:
     @sync_to_async
     def get_qr_by_photo(self, binary_photo):
         url = 'https://proverkacheka.com/api/v1/check/get'
-        data = {'token': self.token}
+        token = Token.objects.all().order_by('-created_at')[0]
+        data = {'token': token}
         files = {'qrfile': binary_photo}
         response = requests.post(url, data=data, files=files)
         response = response.json()
@@ -80,6 +81,7 @@ class ProverkachekaInterface:
         except Exception as err:
             log.error(err)
             return qr_raw, operation_type, product_list, 0
+
 
 #
 # test = ProverkachekaInterface()

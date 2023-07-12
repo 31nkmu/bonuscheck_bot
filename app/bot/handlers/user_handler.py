@@ -171,6 +171,8 @@ class BotHandler:
             photo = message.photo[-1]
             photo_binary = await photo.download(io.BytesIO())
             qr_raw, operation_type, product_list, code = await self.pchi.get_qr_by_photo(photo_binary)
+            if code == 401:
+                raise ValueError('Неверный токен')
             if code == 1:
                 # проверяет есть ли кодовое слово
                 have_codeword_products = await self.bi.get_have_codeword_products(product_list)
