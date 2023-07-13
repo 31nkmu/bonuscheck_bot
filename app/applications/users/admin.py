@@ -34,6 +34,7 @@ class UserAdmin(admin.ModelAdmin):
 class CodeAdmin(admin.ModelAdmin):
     actions = ['set_field_to_false', 'set_field_to_true']
     list_display = ("keycode", "is_active")
+    list_filter = ("is_active",)
 
     def set_field_to_false(self, request, queryset):
         # Обновить поле на False для выбранных объектов
