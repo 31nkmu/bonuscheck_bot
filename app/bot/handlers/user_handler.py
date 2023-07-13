@@ -94,6 +94,8 @@ class BotHandler:
                                                 role=UserRole.ADMIN)
         self.dp.register_callback_query_handler(self.cancel_output, Text('cancel_output'), state='*',
                                                 role=[UserRole.USER, UserRole.ADMIN])
+        self.dp.register_callback_query_handler(self.change_code, Text('change_code'), state='*',
+                                                role=[UserRole.USER, UserRole.ADMIN, UserRole.NOT_ACTIVE])
 
     @staticmethod
     async def edit_page(message: Message,
@@ -113,14 +115,18 @@ class BotHandler:
         if user:
             success_code_kb = await self.kb.get_paid_kb()
             success_code_text = "Код успешно найден!"
-            await self.bot.send_photo(chat_id=message.chat.id,
-                                      photo=types.InputFile('app/bot/media/test2.jpg'),
-                                      caption=success_code_text,
-                                      reply_markup=success_code_kb)
+            await self.bot.send_message(chat_id=message.chat.id,
+                                        text=success_code_text,
+                                        reply_markup=success_code_kb)
             return
         await FSM.enter_code.set()
-        text_email_code = '👇Введите код'
+        text_email_code = '👇Введите код с места покупки'
         await self.bot.send_message(chat_id=message.chat.id, text=text_email_code)
+
+    async def change_code(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        await FSM.enter_code.set()
+        await self.bot.send_message(cb.message.chat.id, 'Введите новый код')
 
     async def enter_code(self, message: types.Message, state: FSMContext):
         """
@@ -305,9 +311,9 @@ class BotHandler:
                 JOIN
                     users_users uu ON uc.id = uu.code_id
                 LEFT OUTER JOIN
-                    users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_processed = true
+                    checks_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_processed = true
                 JOIN
-                    users_product p ON ch_processed.id = p.check_field_id
+                    checks_product p ON ch_processed.id = p.check_field_id
             """)
             rows = cursor.fetchall()
             column_names = [desc[0] for desc in cursor.description]
@@ -327,9 +333,9 @@ class BotHandler:
                 JOIN
                     users_users uu ON uc.id = uu.code_id
                 LEFT OUTER JOIN
-                    users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_reject = true
+                    checks_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_reject = true
                 JOIN
-                    users_product p ON ch_processed.id = p.check_field_id
+                    checks_product p ON ch_processed.id = p.check_field_id
             """)
             rows = cursor.fetchall()
             column_names = [desc[0] for desc in cursor.description]
@@ -349,9 +355,9 @@ class BotHandler:
                 JOIN
                     users_users uu ON uc.id = uu.code_id
                 LEFT OUTER JOIN
-                    users_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_accepted = true
+                    checks_check ch_processed ON uu.id = ch_processed.owner_id AND ch_processed.is_accepted = true
                 JOIN
-                    users_product p ON ch_processed.id = p.check_field_id
+                    checks_product p ON ch_processed.id = p.check_field_id
             """)
             rows = cursor.fetchall()
             column_names = [desc[0] for desc in cursor.description]

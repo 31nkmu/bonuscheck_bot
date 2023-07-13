@@ -5,7 +5,7 @@ from applications.checks.models import Check, Product, CodeWord, Gtin, Bonus
 
 @admin.register(Check)
 class CheckAdmin(admin.ModelAdmin):
-    list_display = ("qr_data", "owner", "products", "product_count")
+    list_display = ("qr_data", "owner", "products", "product_count", "bonus_balance")
     list_filter = ("owner",)
 
     def products(self, obj):

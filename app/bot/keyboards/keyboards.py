@@ -8,6 +8,7 @@ class KeyboardManager:
         kb = types.InlineKeyboardMarkup()
         kb.add(types.InlineKeyboardButton(text='Загрузить чек', callback_data='download_check'))
         kb.add(types.InlineKeyboardButton(text='Личный кабинет', callback_data='personal_area'))
+        kb.add(types.InlineKeyboardButton(text='Поменять код', callback_data='change_code'))
         return kb
 
     @staticmethod

@@ -30,7 +30,7 @@ class Code(models.Model):
     """
     keycode = models.CharField(max_length=120, verbose_name='Код', unique=True)
     is_active = models.BooleanField(default=True, verbose_name='Активен')
-    excel_file = models.FileField(upload_to='excel_files', verbose_name='Файл Excel')
+    excel_file = models.FileField(upload_to='excel_files', verbose_name='Файл Excel', null=True, blank=True)
 
     def __str__(self):
         return self.keycode
