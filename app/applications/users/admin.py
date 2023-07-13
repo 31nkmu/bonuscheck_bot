@@ -57,9 +57,11 @@ class CodeAdmin(admin.ModelAdmin):
     def import_codes_view(self, request):
         if request.method == 'POST' and 'excel_file' in request.FILES:
             excel_file = request.FILES['excel_file']
-            df = pd.read_excel(excel_file)
+            df = pd.read_excel(excel_file, header=None)
             values = df.iloc[:, 0].tolist()
             for value in values:
+                print(value)
+                print('!!!!!!!!!!!!!!!!')
                 try:
                     code = Code(keycode=value, is_active=True)
                     code.save()
@@ -82,17 +84,16 @@ class CodeAdmin(admin.ModelAdmin):
     def inactive_codes_view(self, request):
         if request.method == 'POST' and 'excel_file' in request.FILES:
             excel_file = request.FILES['excel_file']
-            df = pd.read_excel(excel_file)
+            df = pd.read_excel(excel_file, header=None)
             values = df.iloc[:, 0].tolist()
             for value in values:
                 try:
-                    code = Code.objects.get(keycode=value, is_active=True)
-                    code.is_active = False
-                    code.save()
+                    code = Code.objects.get(keycode=value)
+                    code.delete()
                 except Exception as err:
                     log.warning(err)
 
-            self.message_user(request, "Коды из файла Excel успешно деактивированы.")
+            self.message_user(request, "Коды из файла Excel успешно удалены.")
             return HttpResponseRedirect('../')
 
         show_form = request.GET.get('show_form', False)

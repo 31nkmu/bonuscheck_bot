@@ -3,7 +3,7 @@
 {% block content %}
     {% if show_form %}
         <div class="module">
-            <h2>Деактивировать коды файлом</h2>
+            <h2>Удалить коды файлом</h2>
             <form enctype="multipart/form-data" method="post">
                 {% csrf_token %}
                 {{ form.as_table }}
@@ -11,6 +11,6 @@
             </form>
         </div>
     {% else %}
-        <p>Для деактивации кодов файлом, нажмите кнопку "Загрузить коды файлом" выше.</p>
+        <p>Для удаления кодов файлом, нажмите кнопку "Загрузить коды файлом" выше.</p>
     {% endif %}
 {% endblock %}
