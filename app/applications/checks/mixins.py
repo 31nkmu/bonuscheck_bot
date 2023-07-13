@@ -28,19 +28,21 @@ class CheckInterfaceMixin:
                 owner = Users.objects.get(tg_id=chat_id)
                 check_obj = Check.objects.create(owner=owner, qr_data=qr_raw, is_processed=True, bonus_balance=100,
                                                  is_accepted=False)
+                code = owner.code.keycode
                 product_obj_list = []
-                res_quantity = 0
-                for product in product_list:
-                    product_obj_list.append(
-                        Product(check_field=check_obj, price=product['price'], name=product['name'],
-                                quantity=product['quantity'])
-                    )
-                    res_quantity += product['quantity']
-
                 # TODO: узнать сколько баланса начислить
                 bonus = Bonus.objects.all().first()
                 if not bonus:
                     bonus = Bonus.objects.create()
+                res_quantity = 0
+                for product in product_list:
+                    product_bonus = product['quantity'] * float(bonus.balance)
+                    product_obj_list.append(
+                        Product(check_field=check_obj, price=product['price'], name=product['name'],
+                                quantity=product['quantity'], bonus=product_bonus, code=code)
+                    )
+                    res_quantity += product['quantity']
+
                 owner.bonus_balance += bonus.balance * res_quantity
                 check_obj.bonus_balance = bonus.balance * res_quantity
                 owner.save()
@@ -60,13 +62,22 @@ class CheckInterfaceMixin:
             with transaction.atomic():
                 owner = Users.objects.get(tg_id=chat_id)
                 check_obj = Check.objects.create(owner=owner, qr_data=qr_raw)
+                code = owner.code.keycode
+                bonus = Bonus.objects.all().first()
+                if not bonus:
+                    bonus = Bonus.objects.create()
+                res_quantity = 0
                 product_obj_list = []
                 for product in product_list:
+                    product_bonus = product['quantity'] * float(bonus.balance)
                     product_obj_list.append(
                         Product(check_field=check_obj, price=product['price'], name=product['name'],
-                                quantity=product['quantity'])
+                                quantity=product['quantity'], bonus=product_bonus, code=code)
                     )
+                    res_quantity += product['quantity']
+                check_obj.bonus_balance = bonus.balance * res_quantity
                 Product.objects.bulk_create(product_obj_list)
+                check_obj.save()
             return True
         except Exception as err:
             log.error(err)

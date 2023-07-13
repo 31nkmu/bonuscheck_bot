@@ -21,7 +21,7 @@ class CheckAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("price", "name", "quantity", "check_field")
+    list_display = ("price", "name", "quantity", "check_field", "code")
     list_filter = ("check_field",)
 
 
