@@ -96,6 +96,8 @@ class BotHandler:
                                                 role=[UserRole.USER, UserRole.ADMIN])
         self.dp.register_callback_query_handler(self.change_code, Text('change_code'), state='*',
                                                 role=[UserRole.USER, UserRole.ADMIN, UserRole.NOT_ACTIVE])
+        self.dp.register_callback_query_handler(self.output_back, Text('output_back'), state='*',
+                                                role=[UserRole.USER, UserRole.ADMIN])
 
     @staticmethod
     async def edit_page(message: Message,
@@ -455,7 +457,7 @@ class BotHandler:
             await self.bot.send_message(message.chat.id, is_have_output_text, reply_markup=kb)
             return
         send_data_text = 'Введите данные для получения бонусов\nНомер телефона или карты'
-        kb = await self.kb.get_back()
+        kb = await self.kb.get_output_back_kb()
         await state.update_data(balance=balance)
         await FSM.save_output.set()
         await self.bot.send_message(message.chat.id, send_data_text, reply_markup=kb)
@@ -551,3 +553,7 @@ class BotHandler:
             kb = await self.kb.get_back()
             await FSM.take_withdraw.set()
             await self.bot.send_message(message.from_user.id, not_created_text, reply_markup=kb)
+
+    async def output_back(self, cb: CallbackQuery, state: FSMContext):
+        await state.finish()
+        await self.withdraw_funds(cb, state)

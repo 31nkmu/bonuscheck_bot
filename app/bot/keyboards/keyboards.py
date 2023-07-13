@@ -55,3 +55,10 @@ class KeyboardManager:
         kb.add(types.InlineKeyboardButton(text='Отклонить', callback_data='reject_output'))
         kb.add(types.InlineKeyboardButton(text='Назад', callback_data='get_back_admin'))
         return kb
+
+    @staticmethod
+    async def get_output_back_kb() -> types.InlineKeyboardMarkup:
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton(text='Назад', callback_data='output_back'))
+        return kb
+

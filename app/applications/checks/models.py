@@ -36,8 +36,8 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
     name = models.TextField(verbose_name='Название')
     quantity = models.PositiveIntegerField(verbose_name='Количество')
-    bonus = models.DecimalField(max_digits=10, decimal_places=2)
-    code = models.CharField(max_length=200)
+    bonus = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Бонусы')
+    code = models.CharField(max_length=200, verbose_name='Код')
 
     def __str__(self):
         return self.name
