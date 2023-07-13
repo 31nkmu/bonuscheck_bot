@@ -451,20 +451,6 @@ class BotHandler:
         await FSM.save_output.set()
         await self.bot.send_message(message.chat.id, send_data_text, reply_markup=kb)
         return
-        # TODO: Внедрить в стейт
-        # is_created = await self.bi.create_output(tg_id=user_obj, balance=balance)
-        # if is_created is True:
-        #     is_created_text = 'Сообщение о выводе бонусных средств было отправлено на обработку'
-        #     text_to_admin = f'Пользователь {user_obj.tg_id} хочет вывести {balance}\n' \
-        #                     f'Его баланс составляет {user_obj.bonus_balance}'
-        #     kb = await self.kb.get_personal_area_kb()
-        #     await self.send_messages_to_admin(text_to_admin)
-        #     await self.bot.send_message(message.chat.id, is_created_text, reply_markup=kb)
-        # else:
-        #     not_created_text = 'Что-то пошло не так, введите баланс заново'
-        #     kb = await self.kb.get_back()
-        #     await FSM.take_withdraw.set()
-        #     await self.bot.send_message(message.from_user.id, not_created_text, reply_markup=kb)
 
     @sync_to_async
     def send_messages_to_admin(self, msg):

@@ -1,0 +1,9 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li style="list-style: none;">
+        <a href="{% url 'admin:import-codes' %}?show_form=true" class="btn btn-primary">Загрузить коды файлом</a>
+        <a href="{% url 'admin:inactive-codes' %}?show_form=true" class="btn btn-primary">Деактивировать коды файлом</a>
+    </li>
+    {{ block.super }}
+{% endblock %}

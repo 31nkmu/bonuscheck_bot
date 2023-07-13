@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+    {% if show_form %}
+        <div class="module">
+            <h2>Деактивировать коды файлом</h2>
+            <form enctype="multipart/form-data" method="post">
+                {% csrf_token %}
+                {{ form.as_table }}
+                <button type="submit">Загрузить</button>
+            </form>
+        </div>
+    {% else %}
+        <p>Для деактивации кодов файлом, нажмите кнопку "Загрузить коды файлом" выше.</p>
+    {% endif %}
+{% endblock %}
