@@ -60,8 +60,6 @@ class CodeAdmin(admin.ModelAdmin):
             df = pd.read_excel(excel_file, header=None)
             values = df.iloc[:, 0].tolist()
             for value in values:
-                print(value)
-                print('!!!!!!!!!!!!!!!!')
                 try:
                     code = Code(keycode=value, is_active=True)
                     code.save()
