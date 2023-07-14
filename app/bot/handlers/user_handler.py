@@ -17,6 +17,7 @@ import pandas as pd
 
 from applications.users.models import UserRole
 from bot.keyboards.keyboards import KeyboardManager
+from config.settings import BASE_DIR
 from interface.backend import BackendInterface
 from interface.proverkacheka import ProverkachekaInterface
 
@@ -112,7 +113,7 @@ class BotHandler:
         await state.finish()
         text = "👋Здравствуйте!"
         await self.bot.send_photo(chat_id=message.chat.id, caption=text,
-                                  photo=types.InputFile('app/bot/media/test2.jpg'))
+                                  photo=types.InputFile(BASE_DIR / 'app/bot/media/test2.jpg'))
         user = await self.bi.get_user_with_code(tg_id=message.from_user.id)
         if user:
             success_code_kb = await self.kb.get_paid_kb()
@@ -143,7 +144,7 @@ class BotHandler:
                 success_code_kb = await self.kb.get_paid_kb()
                 success_code_text = "Код успешно найден! \n Вы были зарегистрированы"
                 await self.bot.send_photo(chat_id=message.chat.id,
-                                          photo=types.InputFile('app/bot/media/test2.jpg'),
+                                          photo=types.InputFile(BASE_DIR / 'app/bot/media/test2.jpg'),
                                           caption=success_code_text,
                                           reply_markup=success_code_kb)
             else:

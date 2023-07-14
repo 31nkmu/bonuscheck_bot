@@ -1,0 +1,79 @@
+version: '3.9'
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    volumes:
+      - static_volume:/home/app/web/app/static
+      - media_volume:/home/app/web/app/media
+    expose:
+      - ${PORT}
+    command: poetry run gunicorn --reload --bind 0.0.0.0:8000 --workers ${WORKERS} --log-level ${LEVEL} config.wsgi:application
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - migration
+    networks:
+      - network
+
+  migration:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    command: poetry run python3 manage.py migrate
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - network
+
+  db:
+    image: postgres:14-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: ${SQL_USER}
+      POSTGRES_PASSWORD: ${SQL_PASSWORD}
+      POSTGRES_DB: ${SQL_DATABASE}
+    networks:
+      - network
+    env_file:
+      - .env
+
+  nginx:
+    build: ../nginx
+    volumes:
+      - static_volume:/home/app/web/app/static
+      - media_volume:/home/app/web/app/media
+    ports:
+      - ${NGINX_PORT}:${NGINX_PORT}
+    depends_on:
+      - web
+    networks:
+      - network
+
+  bot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    command: poetry run python3 runbot.py
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - network
+
+
+networks:
+  network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
