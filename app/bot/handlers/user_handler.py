@@ -308,7 +308,7 @@ class BotHandler:
             cursor.execute("""
                 SELECT
                     p.code as "code", uu.username, uu.tg_id, uu.bonus_balance as "balance", 
-                    ch_processed.qr_data as "qr code", p.name as "product name", p.price, p.quantity, 
+                    ch_processed.qr_data as "qr code", p.name as "product name", ROUND(p.price / 100) as "price", p.quantity, 
                     ch_processed.bonus_balance as "check bonus", p.bonus as "product bonus"
                 FROM
                     users_code uc
@@ -331,7 +331,7 @@ class BotHandler:
             cursor.execute("""
                 SELECT
                     p.code as "code", uu.username, uu.tg_id, uu.bonus_balance as "balance", 
-                    ch_processed.qr_data as "qr code", p.name as "product name", p.price, p.quantity, 
+                    ch_processed.qr_data as "qr code", p.name as "product name", ROUND(p.price / 100) as "price", p.quantity, 
                     ch_processed.bonus_balance as "check bonus", p.bonus as "product bonus"
                 FROM
                     users_code uc
@@ -354,7 +354,7 @@ class BotHandler:
             cursor.execute("""
                 SELECT
                     p.code as "code", uu.username, uu.tg_id, uu.bonus_balance as "balance", 
-                    ch_processed.qr_data as "qr code", p.name as "product name", p.price, p.quantity, 
+                    ch_processed.qr_data as "qr code", p.name as "product name", ROUND(p.price / 100) as "price", p.quantity, 
                     ch_processed.bonus_balance as "check bonus", p.bonus as "product bonus"
                 FROM
                     users_code uc

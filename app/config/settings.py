@@ -31,6 +31,9 @@ DEBUG = os.getenv('DEBUG', default=True)
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 
+
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -78,12 +81,12 @@ TEMPLATES = [
     },
 ]
 
-CSRF_TRUSTED_ORIGINS = os.environ.get("BACKEND_CORS_ORIGINS", "http://localhost:8000 http://127.0.0.1:8000").split(",")
+CSRF_TRUSTED_ORIGINS = os.environ.get("BACKEND_CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
 
-CORS_ALLOWED_ORIGINS = os.environ.get("BACKEND_CORS_ORIGINS", "http://localhost:8000 http://127.0.0.1:8000").split(",")
+CORS_ALLOWED_ORIGINS = os.environ.get("BACKEND_CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
 
 CORS_ALLOWED_ORIGIN_REGEXES = os.environ.get("BACKEND_CORS_ORIGINS",
-                                             "http://localhost:8000 http://127.0.0.1:8000").split(" ")
+                                             "http://localhost:8000,http://127.0.0.1:8000").split(" ")
 
 CORS_ALLOW_ALL_ORIGINS = True
 
