@@ -1,4 +1,4 @@
-version: '3.9'
+version: '3.3'
 
 services:
   web:
@@ -9,8 +9,8 @@ services:
       - static_volume:/home/app/web/app/static
       - media_volume:/home/app/web/app/media
     expose:
-      - ${PORT}
-    command: poetry run gunicorn --reload --bind 0.0.0.0:8000 --workers ${WORKERS} --log-level ${LEVEL} config.wsgi:application
+      - 8000
+    command: poetry run gunicorn --reload --bind 0.0.0.0:8000 --workers 1 --log-level info config.wsgi:application
     env_file:
       - .env
     depends_on:
@@ -50,7 +50,7 @@ services:
       - static_volume:/home/app/web/app/static
       - media_volume:/home/app/web/app/media
     ports:
-      - ${NGINX_PORT}:${NGINX_PORT}
+      - 80:80
     depends_on:
       - web
     networks:
@@ -67,7 +67,7 @@ services:
       - .env
     networks:
       - network
-
+    restart: unless-stopped
 
 networks:
   network:

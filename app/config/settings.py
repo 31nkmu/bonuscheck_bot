@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', default=True)
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(' ')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 
 # Application definition
 
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
 
     'applications.users',
     'applications.outputs',
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -75,6 +77,15 @@ TEMPLATES = [
         },
     },
 ]
+
+CSRF_TRUSTED_ORIGINS = os.environ.get("BACKEND_CORS_ORIGINS", "http://localhost:8000 http://127.0.0.1:8000").split(",")
+
+CORS_ALLOWED_ORIGINS = os.environ.get("BACKEND_CORS_ORIGINS", "http://localhost:8000 http://127.0.0.1:8000").split(",")
+
+CORS_ALLOWED_ORIGIN_REGEXES = os.environ.get("BACKEND_CORS_ORIGINS",
+                                             "http://localhost:8000 http://127.0.0.1:8000").split(" ")
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 WSGI_APPLICATION = 'config.wsgi.application'
 

@@ -341,6 +341,21 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-cors-headers"
+version = "4.2.0"
+description = "django-cors-headers is a Django application for handling the server headers required for Cross-Origin Resource Sharing (CORS)."
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "django_cors_headers-4.2.0-py3-none-any.whl", hash = "sha256:9ada212b0e2efd4a5e339360ffc869cb21ac5605e810afe69f7308e577ea5bde"},
+    {file = "django_cors_headers-4.2.0.tar.gz", hash = "sha256:f9749c6410fe738278bc2b6ef17f05195bc7b251693c035752d8257026af024f"},
+]
+
+[package.dependencies]
+Django = ">=3.2"
+
+[[package]]
 name = "django-jazzmin"
 version = "2.6.0"
 description = "Drop-in theme for django admin, that utilises AdminLTE 3 & Bootstrap 4 to make yo' admin look jazzy"
@@ -1169,4 +1184,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "500b451952c0c81f0e7d4199a0df33faf4a330db4363cea57f4dd21c6193c3cb"
+content-hash = "df23eb81840cfd132c87eb086b80df20cb7d54b59e26a3671bdc8dae6a05d152"
